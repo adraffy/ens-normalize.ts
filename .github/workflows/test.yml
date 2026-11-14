@@ -1,0 +1,31 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - run: bun install --frozen-lockfile
+
+      # downloads the pinned spec, regenerates the data, and fails if it differs
+      - name: Generated data is up to date
+        run: |
+          bun scripts/make.ts
+          git diff --exit-code src/generated
+
+      - run: bun run typecheck
+
+      - run: bun run build
+
+      # includes the dist/ bundle tests
+      - run: bun test

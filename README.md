@@ -1,5 +1,7 @@
 # ens-normalize-ts
 
+[![test](https://github.com/adraffy/ens-normalize.ts/actions/workflows/test.yml/badge.svg)](https://github.com/adraffy/ens-normalize.ts/actions/workflows/test.yml)
+
 [ENSIP-15](https://docs.ens.domains/ensip/15) ENS name normalization in TypeScript.
 It's a port of the library part of [ens-normalize.js](https://github.com/adraffy/ens-normalize.js), with no runtime dependencies.
 
