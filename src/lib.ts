@@ -249,11 +249,22 @@ export function shouldEscape(cp: number): boolean {
 }
 
 export type NormalizeOptions = {
-	/** display form: keep emoji presentation (FE0F) and use Ξ for ξ outside Greek */
+	/**
+	 * Return the display form: keeps emoji presentation (FE0F) and uses Ξ for ξ outside Greek.
+	 * Validates the same way. Don't hash or store this form.
+	 * @default false
+	 */
 	beautify?: boolean;
 };
 
-/** normalize (or beautify) a name, throws if invalid */
+/**
+ * Normalize an ENS name (ENSIP-15).
+ * @param name - full name, labels separated by "."; "" returns ""
+ * @returns the normalized name (use this for hashing, comparing, and storing)
+ * @throws Error if any label is invalid; with 2+ labels the message is prefixed by `Invalid label "…": `
+ * @example ensNormalize('Nick.ETH') // "nick.eth"
+ * @example ensNormalize('🚴‍♂️.eth', { beautify: true }) // "🚴‍♂️.eth"
+ */
 export function ensNormalize(name: string, { beautify }: NormalizeOptions = {}): string {
 	return beautify
 		? transform(name, (emoji) => emoji, (cps, type) => {

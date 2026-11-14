@@ -1,28 +1,84 @@
-# ens-normalize-ts
+# ens-normalize.ts
 
 [![test](https://github.com/adraffy/ens-normalize.ts/actions/workflows/test.yml/badge.svg)](https://github.com/adraffy/ens-normalize.ts/actions/workflows/test.yml)
 
 [ENSIP-15](https://docs.ens.domains/ensip/15) ENS name normalization in TypeScript.
 It's a port of the library part of [ens-normalize.js](https://github.com/adraffy/ens-normalize.js), with no runtime dependencies.
 
-| entry | min | gzip | 1.11.1 min | 1.11.1 gzip |
-|---|---:|---:|---:|---:|
-| `ens-normalize-ts` (core) | 22.5 KB | 16.3 KB | 38.3 KB | 26.1 KB |
-| `ens-normalize-ts/xnf` (core, native NF) | 16.9 KB | 12.1 KB | 29.3 KB | 19.4 KB |
-| `ens-normalize-ts/full` (everything) | 25.0 KB | 17.6 KB | 44.1 KB* | 28.2 KB* |
-
-Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
-\* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
-
 ```ts
-import { ensNormalize, ensNormalizeFragment } from 'ens-normalize-ts';
+import { ensNormalize, ensNormalizeFragment } from '@adraffy/ens-normalize.ts';
 
-ensNormalize('RaFFY🚴‍♂️.eTh'); // "raffy🚴‍♂.eth"
+ensNormalize('Nick.ETH');                    // "nick.eth"
+ensNormalize('RaFFY🚴‍♂️.eTh');               // "raffy🚴‍♂.eth"
 ensNormalize('1⃣2⃣.eth', { beautify: true }); // "1️⃣2️⃣.eth"
 ensNormalizeFragment('A_b');                 // "a_b" (no validation)
 ```
 
-## API
+## ensNormalize
+
+```ts
+function ensNormalize(name: string, options?: NormalizeOptions): string;
+
+type NormalizeOptions = {
+	beautify?: boolean; // default: false
+};
+```
+
+Normalizes `name` and returns it, or throws an `Error` if any label is invalid.
+
+- **name:** the full name, with labels separated by `.`. An empty string returns `""`.
+- **returns:** the normalized name. Use this form for hashing, comparing, and storing names.
+- **`beautify: true`:** returns the display form instead. It validates the same way, but keeps emoji presentation (`FE0F`) and writes `ξ` as `Ξ` in labels that aren't Greek. Don't hash or store this form.
+
+```ts
+ensNormalize('ｂｉｔｃｏｉｎ.eth');           // "bitcoin.eth"
+ensNormalize('🚴‍♂️.eth');                    // "🚴‍♂.eth"
+ensNormalize('🚴‍♂️.eth', { beautify: true }); // "🚴‍♂️.eth"
+ensNormalize('ξ.eth', { beautify: true });    // "Ξ.eth"
+ensNormalize('ξένος.eth', { beautify: true }); // "ξένος.eth" (Greek keeps ξ)
+```
+
+**Errors:** the message is the reason. When the name has more than one label, it's prefixed with the offending label.
+
+```ts
+ensNormalize('a!b');     // throws: disallowed character: "!" {21}
+ensNormalize('a!b.eth'); // throws: Invalid label "a!b": disallowed character: "!" {21}
+ensNormalize('a..eth');  // throws: Invalid label "": empty label
+```
+
+The possible reasons are:
+- `empty label`
+- `disallowed character: …`
+- `underscore allowed only at start`
+- `invalid label extension: "xx--"`
+- `illegal placement: …` (leading/trailing/adjacent fenced characters, or a misplaced combining mark)
+- `illegal mixture: Latin + Greek "α" {3B1}` (characters from scripts that can't be mixed)
+- `whole-script confusable: …`
+- `duplicate non-spacing marks: …`
+- `excessive non-spacing marks: …`
+
+Quoted text in messages is followed by U+200E so right-to-left text can't flip the rest of the message.
+
+## ensNormalizeFragment
+
+```ts
+function ensNormalizeFragment(frag: string, decompose?: boolean): string;
+```
+
+Normalizes partial input, for example while someone is typing, without validating labels. It only throws on disallowed characters. Pass `decompose: true` to get NFD output instead of NFC.
+
+## Size
+
+| entry | min | gzip | 1.11.1 min | 1.11.1 gzip |
+|---|---:|---:|---:|---:|
+| `@adraffy/ens-normalize.ts` (core) | 22.5 KB | 16.3 KB | 38.3 KB | 26.1 KB |
+| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 16.9 KB | 12.1 KB | 29.3 KB | 19.4 KB |
+| `@adraffy/ens-normalize.ts/full` (everything) | 25.0 KB | 17.6 KB | 44.1 KB* | 28.2 KB* |
+
+Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
+\* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
+
+## Full API
 
 | ens-normalize.js | here | entry |
 |---|---|---|
@@ -48,7 +104,7 @@ Error messages and outputs match 1.11.1 exactly. Differences:
 
 NFC/NFD is a streaming pipeline (decompose → reorder → compose) that only buffers the combining marks after the last starter.
 
-`ens-normalize-ts/xnf` swaps the embedded NFC/NFD for `String.prototype.normalize()`.
+`@adraffy/ens-normalize.ts/xnf` swaps the embedded NFC/NFD for `String.prototype.normalize()`.
 It's smaller, but results depend on the JS engine's Unicode version.
 
 ## Development
