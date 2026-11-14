@@ -274,7 +274,12 @@ export function ensNormalize(name: string, { beautify }: NormalizeOptions = {}):
 		: transform(name, filterFE0F);
 }
 
-/** normalize without validation (for partial input), optionally NFD; only throws on disallowed characters */
+/**
+ * Normalize without validating, for partial input such as search queries and matching.
+ * Only throws on disallowed characters.
+ * @param decompose - return NFD instead of NFC
+ * @example ensNormalizeFragment('ＶＩＴＡ') // "vita"
+ */
 export function ensNormalizeFragment(frag: string, decompose?: boolean): string {
 	init();
 	return frag

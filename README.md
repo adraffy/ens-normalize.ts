@@ -8,10 +8,10 @@ It's a port of the library part of [ens-normalize.js](https://github.com/adraffy
 ```ts
 import { ensNormalize, ensNormalizeFragment } from '@adraffy/ens-normalize.ts';
 
-ensNormalize('Nick.ETH');                    // "nick.eth"
-ensNormalize('RaFFY🚴‍♂️.eTh');               // "raffy🚴‍♂.eth"
+ensNormalize('Nick.ETH'); // "nick.eth"
+ensNormalize('RaFFY🚴‍♂️.eTh'); // "raffy🚴‍♂.eth"
 ensNormalize('1⃣2⃣.eth', { beautify: true }); // "1️⃣2️⃣.eth"
-ensNormalizeFragment('A_b');                 // "a_b" (no validation)
+ensNormalizeFragment('A_b'); // "a_b" (no validation)
 ```
 
 ## ensNormalize
@@ -31,19 +31,19 @@ Normalizes `name` and returns it, or throws an `Error` if any label is invalid.
 - **`beautify: true`:** returns the display form instead. It validates the same way, but keeps emoji presentation (`FE0F`) and writes `ξ` as `Ξ` in labels that aren't Greek. Don't hash or store this form.
 
 ```ts
-ensNormalize('ｂｉｔｃｏｉｎ.eth');           // "bitcoin.eth"
-ensNormalize('🚴‍♂️.eth');                    // "🚴‍♂.eth"
+ensNormalize('ｂｉｔｃｏｉｎ.eth'); // "bitcoin.eth"
+ensNormalize('🚴‍♂️.eth'); // "🚴‍♂.eth"
 ensNormalize('🚴‍♂️.eth', { beautify: true }); // "🚴‍♂️.eth"
-ensNormalize('ξ.eth', { beautify: true });    // "Ξ.eth"
+ensNormalize('ξ.eth', { beautify: true }); // "Ξ.eth"
 ensNormalize('ξένος.eth', { beautify: true }); // "ξένος.eth" (Greek keeps ξ)
 ```
 
 **Errors:** the message is the reason. When the name has more than one label, it's prefixed with the offending label.
 
 ```ts
-ensNormalize('a!b');     // throws: disallowed character: "!" {21}
+ensNormalize('a!b'); // throws: disallowed character: "!" {21}
 ensNormalize('a!b.eth'); // throws: Invalid label "a!b": disallowed character: "!" {21}
-ensNormalize('a..eth');  // throws: Invalid label "": empty label
+ensNormalize('a..eth'); // throws: Invalid label "": empty label
 ```
 
 The possible reasons are:
@@ -65,7 +65,15 @@ Quoted text in messages is followed by U+200E so right-to-left text can't flip t
 function ensNormalizeFragment(frag: string, decompose?: boolean): string;
 ```
 
-Normalizes partial input, for example while someone is typing, without validating labels. It only throws on disallowed characters. Pass `decompose: true` to get NFD output instead of NFC.
+Normalizes text without validating it, so it works on partial input that isn't a complete or valid name. That makes it useful for formatting search queries and matching: normalize both the query and the candidate names, then compare or search, even when the query is only part of a label. It only throws on disallowed characters.
+
+Pass `decompose: true` to get NFD output instead of NFC, for example to match regardless of accents by stripping combining marks afterward.
+
+```ts
+ensNormalizeFragment('A_b'); // "a_b" (ensNormalize would throw: underscore allowed only at start)
+ensNormalizeFragment('ＶＩＴＡ'); // "vita"
+ensNormalizeFragment('é', true); // "e\u0301"
+```
 
 ## Size
 
