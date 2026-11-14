@@ -248,9 +248,17 @@ export function shouldEscape(cp: number): boolean {
 	return ESCAPE.has(cp);
 }
 
+export type NormalizeOptions = {
+	/**
+	 * Normalize without validating (for partial input, eg. while typing).
+	 * Only throws on disallowed characters. `'nfd'` also decomposes the output.
+	 */
+	fragment?: boolean | 'nfd';
+};
+
 /** normalize a name or throw */
-export function ensNormalize(name: string): string {
-	return transform(name, filterFE0F);
+export function ensNormalize(name: string, { fragment }: NormalizeOptions = {}): string {
+	return fragment ? normalizeFragment(name, fragment == 'nfd') : transform(name, filterFE0F);
 }
 
 /** normalize a name for display (preserves emoji presentation, uses Ξ) or throw */
@@ -261,8 +269,8 @@ export function ensBeautify(name: string): string {
 	});
 }
 
-/** normalize without validation (for partial input), optionally NFD */
-export function ensNormalizeFragment(frag: string, decompose?: boolean): string {
+// tokenize each label without validation
+function normalizeFragment(frag: string, decompose: boolean): string {
 	init();
 	return frag
 		.split(STOP_CH)

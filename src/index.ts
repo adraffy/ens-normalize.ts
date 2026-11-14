@@ -1,2 +1,3 @@
-// core: normalize + beautify, see ./full.ts for everything else
-export { ensNormalize, ensBeautify, ensNormalizeFragment, shouldEscape, nfc, nfd } from './lib.ts';
+// core: just normalize + beautify, see ./full.ts for everything else
+export { ensNormalize, ensBeautify } from './lib.ts';
+export type { NormalizeOptions } from './lib.ts';
