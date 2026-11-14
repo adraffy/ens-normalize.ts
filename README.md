@@ -3,11 +3,14 @@
 [ENSIP-15](https://docs.ens.domains/ensip/15) ENS name normalization in TypeScript.
 It's a port of the library part of [ens-normalize.js](https://github.com/adraffy/ens-normalize.js), with no runtime dependencies.
 
-| entry | min | gzip | ens-normalize.js 1.11.1 |
-|---|---:|---:|---:|
-| `ens-normalize-ts` (core) | 22.5 KB | 16.4 KB | 38.3 KB / 26.1 KB |
-| `ens-normalize-ts/xnf` (core, native NF) | 16.9 KB | 12.1 KB | 29.3 KB |
-| `ens-normalize-ts/full` (everything) | 25.0 KB | 17.6 KB | |
+| entry | min | gzip | 1.11.1 min | 1.11.1 gzip |
+|---|---:|---:|---:|---:|
+| `ens-normalize-ts` (core) | 22.5 KB | 16.4 KB | 38.3 KB | 26.1 KB |
+| `ens-normalize-ts/xnf` (core, native NF) | 16.9 KB | 12.1 KB | 29.3 KB | 19.4 KB |
+| `ens-normalize-ts/full` (everything) | 25.0 KB | 17.6 KB | 44.1 KB* | 28.2 KB* |
+
+Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
+\* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
 
 ```ts
 import { ensNormalize, ensBeautify } from 'ens-normalize-ts';
