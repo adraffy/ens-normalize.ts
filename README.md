@@ -5,7 +5,7 @@ It's a port of the library part of [ens-normalize.js](https://github.com/adraffy
 
 | entry | min | gzip | 1.11.1 min | 1.11.1 gzip |
 |---|---:|---:|---:|---:|
-| `ens-normalize-ts` (core) | 22.5 KB | 16.4 KB | 38.3 KB | 26.1 KB |
+| `ens-normalize-ts` (core) | 22.5 KB | 16.3 KB | 38.3 KB | 26.1 KB |
 | `ens-normalize-ts/xnf` (core, native NF) | 16.9 KB | 12.1 KB | 29.3 KB | 19.4 KB |
 | `ens-normalize-ts/full` (everything) | 25.0 KB | 17.6 KB | 44.1 KB* | 28.2 KB* |
 
@@ -13,11 +13,11 @@ Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, 
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
 
 ```ts
-import { ensNormalize, ensBeautify } from 'ens-normalize-ts';
+import { ensNormalize, ensNormalizeFragment } from 'ens-normalize-ts';
 
 ensNormalize('RaFFY🚴‍♂️.eTh'); // "raffy🚴‍♂.eth"
-ensBeautify('1⃣2⃣.eth');      // "1️⃣2️⃣.eth"
-ensNormalize('A_b', { fragment: true }); // "a_b" (no validation)
+ensNormalize('1⃣2⃣.eth', { beautify: true }); // "1️⃣2️⃣.eth"
+ensNormalizeFragment('A_b');                 // "a_b" (no validation)
 ```
 
 ## API
@@ -25,8 +25,8 @@ ensNormalize('A_b', { fragment: true }); // "a_b" (no validation)
 | ens-normalize.js | here | entry |
 |---|---|---|
 | `ens_normalize` | `ensNormalize(name)` | core |
-| `ens_beautify` | `ensBeautify(name)` | core |
-| `ens_normalize_fragment` | `ensNormalize(frag, {fragment: true})`, or `{fragment: 'nfd'}` to decompose | core |
+| `ens_beautify` | `ensNormalize(name, {beautify: true})` | core |
+| `ens_normalize_fragment` | `ensNormalizeFragment(frag, decompose?)` | core |
 | `ens_split` | `ensSplit(name, preserveEmoji?)` | full |
 | `ens_emoji` | `ensEmoji()` | full |
 | `ens_tokenize` | `ensTokenize(name, {nf?})` | full |

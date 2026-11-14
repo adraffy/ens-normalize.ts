@@ -249,28 +249,22 @@ export function shouldEscape(cp: number): boolean {
 }
 
 export type NormalizeOptions = {
-	/**
-	 * Normalize without validating (for partial input, eg. while typing).
-	 * Only throws on disallowed characters. `'nfd'` also decomposes the output.
-	 */
-	fragment?: boolean | 'nfd';
+	/** display form: keep emoji presentation (FE0F) and use Ξ for ξ outside Greek */
+	beautify?: boolean;
 };
 
-/** normalize a name or throw */
-export function ensNormalize(name: string, { fragment }: NormalizeOptions = {}): string {
-	return fragment ? normalizeFragment(name, fragment == 'nfd') : transform(name, filterFE0F);
+/** normalize (or beautify) a name, throws if invalid */
+export function ensNormalize(name: string, { beautify }: NormalizeOptions = {}): string {
+	return beautify
+		? transform(name, (emoji) => emoji, (cps, type) => {
+				// update ethereum symbol: ξ => Ξ if not greek
+				if (type !== 'Greek') for (let i = 0; i < cps.length; i++) if (cps[i] == 0x3be) cps[i] = 0x39e;
+			})
+		: transform(name, filterFE0F);
 }
 
-/** normalize a name for display (preserves emoji presentation, uses Ξ) or throw */
-export function ensBeautify(name: string): string {
-	return transform(name, (emoji) => emoji, (cps, type) => {
-		// update ethereum symbol: ξ => Ξ if not greek
-		if (type !== 'Greek') for (let i = 0; i < cps.length; i++) if (cps[i] == 0x3be) cps[i] = 0x39e;
-	});
-}
-
-// tokenize each label without validation
-function normalizeFragment(frag: string, decompose: boolean): string {
+/** normalize without validation (for partial input), optionally NFD; only throws on disallowed characters */
+export function ensNormalizeFragment(frag: string, decompose?: boolean): string {
 	init();
 	return frag
 		.split(STOP_CH)

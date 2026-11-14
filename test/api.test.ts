@@ -22,9 +22,9 @@ test(`api parity (${cases.length} names)`, () => {
 			plain({
 				name,
 				normalize: run(() => lib.ensNormalize(name)),
-				beautify: run(() => lib.ensBeautify(name)),
-				fragment: run(() => lib.ensNormalize(name, { fragment: true })),
-				fragmentNFD: run(() => lib.ensNormalize(name, { fragment: 'nfd' })),
+				beautify: run(() => lib.ensNormalize(name, { beautify: true })),
+				fragment: run(() => lib.ensNormalizeFragment(name)),
+				fragmentNFD: run(() => lib.ensNormalizeFragment(name, true)),
 				split: run(() => lib.ensSplit(name)),
 				tokenize: run(() => lib.ensTokenize(name)),
 			}),
@@ -34,8 +34,8 @@ test(`api parity (${cases.length} names)`, () => {
 
 test('examples', () => {
 	expect(lib.ensNormalize('RaFFY🚴‍♂️.eTh')).toBe('raffy🚴‍♂.eth');
-	expect(lib.ensBeautify('1⃣2⃣.eth')).toBe('1️⃣2️⃣.eth');
-	expect(lib.ensBeautify('ξ.eth')).toBe('Ξ.eth');
+	expect(lib.ensNormalize('1⃣2⃣.eth', { beautify: true })).toBe('1️⃣2️⃣.eth');
+	expect(lib.ensNormalize('ξ.eth', { beautify: true })).toBe('Ξ.eth');
 	expect(() => lib.ensNormalize('a_b')).toThrow('underscore allowed only at start');
 	expect(lib.ensSplit('')).toEqual([]);
 	expect(lib.ensEmoji().length).toBeGreaterThan(3000);
