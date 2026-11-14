@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # downloads the derived spec + tests from ens-normalize.js
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 BASE=https://raw.githubusercontent.com/adraffy/ens-normalize.js/main
 
 # spec

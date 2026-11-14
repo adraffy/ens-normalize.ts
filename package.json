@@ -23,7 +23,7 @@
 	"types": "./dist/types/index.d.ts",
 	"files": ["dist"],
 	"scripts": {
-		"download": "./download.sh",
+		"download": "./scripts/download.sh",
 		"make": "bun scripts/make.ts",
 		"build": "bun scripts/build.ts",
 		"test": "bun test",

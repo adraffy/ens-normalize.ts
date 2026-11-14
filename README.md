@@ -47,7 +47,7 @@ It's smaller, but results depend on the JS engine's Unicode version.
 Requires [Bun](https://bun.sh).
 
 ```sh
-./download.sh       # data/{spec,nf}.json + test/data/{tests,nf-tests}.json
+./scripts/download.sh # data/{spec,nf}.json + test/data/{tests,nf-tests}.json
 bun scripts/make.ts # data/*.json => src/generated/*.ts
 bun run build       # dist/ (esm + cjs, minified) + dist/types
 bun test
