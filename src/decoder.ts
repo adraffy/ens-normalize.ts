@@ -1,8 +1,8 @@
 // Decoder for the payloads produced by scripts/encoder.ts:
-// an adaptive binary range coder over base-90 digits,
+// an adaptive binary range coder over base-93 digits,
 // with integers binarized as context-modeled Exp-Golomb.
 
-const RADIX = 90;
+const RADIX = 93;
 const BOT = RADIX ** 4; // renormalize below this
 const ONE = 4096; // probability scale (12-bit)
 
@@ -18,24 +18,29 @@ export type Reader = {
 export function reader(str: string): Reader {
 	let pos = 0;
 	const digit = () => {
-		const c = (str.charCodeAt(pos++) || 35) - 35; // pad with zero
-		return c - +(c > 4) - +(c > 57); // skip ' and \
+		const c = (str.charCodeAt(pos++) || 32) - 32; // pad with zero
+		return c - +(c > 7) - +(c > 60); // printable ascii, skipping ' and \
 	};
-	const probs: number[] = []; // probability of 0, by key
+	// probability of 0, by key: average of a fast and a slow adaptive estimate
+	const fast: number[] = [];
+	const slow: number[] = [];
 	let range = RADIX * BOT - 1;
 	let code = 0;
 	for (let i = 0; i < 5; i++) code = code * RADIX + digit();
 	const bit = (key: number) => {
-		const p = (probs[key] ??= ONE >> 1);
-		const bound = Math.floor(range / ONE) * p;
+		const pf = (fast[key] ??= ONE >> 1);
+		const ps = (slow[key] ??= ONE >> 1);
+		const bound = Math.floor(range / ONE) * ((pf + ps) >> 1);
 		const b = code >= bound;
 		if (b) {
 			code -= bound;
 			range -= bound;
-			probs[key] = p - (p >> 4);
+			fast[key] = pf - (pf >> 2);
+			slow[key] = ps - (ps >> 5);
 		} else {
 			range = bound;
-			probs[key] = p + ((ONE - p) >> 4);
+			fast[key] = pf + ((ONE - pf) >> 2);
+			slow[key] = ps + ((ONE - ps) >> 5);
 		}
 		while (range < BOT) {
 			range *= RADIX;

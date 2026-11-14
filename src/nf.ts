@@ -8,19 +8,16 @@ import { reader, readMapped } from './decoder.ts';
 
 // algorithmic hangul
 // https://www.unicode.org/versions/Unicode15.0.0/ch03.pdf (page 144)
-const S0 = 0xac00;
-const L0 = 0x1100;
-const V0 = 0x1161;
-const T0 = 0x11a7;
-const L_COUNT = 19;
-const V_COUNT = 21;
+const S0 = 0xac00; // syllables
+const S1 = 0xd7a4; // S0 + L_COUNT * N_COUNT
+const L0 = 0x1100; // leading
+const L1 = 0x1113; // L0 + 19
+const V0 = 0x1161; // vowel
+const V1 = 0x1176; // V0 + 21
+const T0 = 0x11a7; // trailing
+const T1 = 0x11c3; // T0 + 28
 const T_COUNT = 28;
-const N_COUNT = V_COUNT * T_COUNT;
-const S_COUNT = L_COUNT * N_COUNT;
-const S1 = S0 + S_COUNT;
-const L1 = L0 + L_COUNT;
-const V1 = V0 + V_COUNT;
-const T1 = T0 + T_COUNT;
+const N_COUNT = 588; // 21 * 28
 
 const isHangul = (cp: number) => cp >= S0 && cp < S1;
 

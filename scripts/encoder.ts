@@ -1,21 +1,22 @@
-// Adaptive binary range coder (LZMA-style) that emits base-90 digits.
+// Adaptive binary range coder (LZMA-style) that emits base-93 digits.
 // Integers are binarized as Exp-Golomb with context-modeled bits.
 // This file must stay in sync with src/decoder.ts.
 
-export const RADIX = 90;
+export const RADIX = 93;
 export const TOP = RADIX ** 5; // range upper bound
 export const BOT = RADIX ** 4; // renormalize below this
 export const PROB_BITS = 12;
 export const PROB_ONE = 1 << PROB_BITS;
-export const SHIFT = 4; // adaptation rate (must match decoder)
+export const FAST = 2; // adaptation rates of the two mixed estimates (must match decoder)
+export const SLOW = 5;
 export const CTX = 2048; // probability slots per integer context
 export const TREE = 3; // top mantissa bits modeled as a bit-tree (must match decoder)
 
-// digit d => printable ascii, skipping ' and \
+// digit d => printable ascii (0x20..0x7E), skipping ' and \
 export function charFromDigit(d: number): string {
-	let c = d + (d >= 4 ? 1 : 0);
-	if (c >= 57) c++;
-	return String.fromCharCode(35 + c);
+	let c = d + (d >= 7 ? 1 : 0);
+	if (c >= 60) c++;
+	return String.fromCharCode(32 + c);
 }
 
 export class Encoder {
@@ -24,7 +25,8 @@ export class Encoder {
 	private cache = 0;
 	private cacheSize = 1;
 	private digits: number[] = [];
-	private probs = new Map<number, number>();
+	private fast = new Map<number, number>();
+	private slow = new Map<number, number>();
 	symbols = 0;
 	cost = new Map<number, number>(); // bits per context
 	log: [number, number][] = []; // (ctx, value) for verification
@@ -43,17 +45,22 @@ export class Encoder {
 		this.low = (low % BOT) * RADIX;
 	}
 
+	// probability of 0 = average of a fast and a slow adaptive estimate
 	bit(key: number, b: number | boolean) {
-		const p = this.probs.get(key) ?? PROB_ONE >> 1;
+		const pf = this.fast.get(key) ?? PROB_ONE >> 1;
+		const ps = this.slow.get(key) ?? PROB_ONE >> 1;
+		const p = (pf + ps) >> 1;
 		const bound = Math.floor(this.range / PROB_ONE) * p;
 		this.cost.set(this.ctx, (this.cost.get(this.ctx) ?? 0) - Math.log2(b ? 1 - p / PROB_ONE : p / PROB_ONE));
 		if (b) {
 			this.low += bound;
 			this.range -= bound;
-			this.probs.set(key, p - (p >> SHIFT));
+			this.fast.set(key, pf - (pf >> FAST));
+			this.slow.set(key, ps - (ps >> SLOW));
 		} else {
 			this.range = bound;
-			this.probs.set(key, p + ((PROB_ONE - p) >> SHIFT));
+			this.fast.set(key, pf + ((PROB_ONE - pf) >> FAST));
+			this.slow.set(key, ps + ((PROB_ONE - ps) >> SLOW));
 		}
 		while (this.range < BOT) {
 			this.range *= RADIX;

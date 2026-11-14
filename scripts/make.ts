@@ -27,7 +27,7 @@ class Sections {
 	constructor(readonly enc: Encoder) {}
 	mark(name: string) {
 		const bits = [...this.enc.cost.values()].reduce((a, b) => a + b, 0);
-		this.sizes.push([name, Math.round((bits - this.prev) / Math.log2(90))]);
+		this.sizes.push([name, Math.round((bits - this.prev) / Math.log2(93))]);
 		this.prev = bits;
 	}
 }
@@ -286,7 +286,7 @@ function finish(name: string, { enc, sec }: { enc: Encoder; sec: Sections }) {
 		if (x !== y) throw new Error(`${name}: decode mismatch ctx=${c}: ${x} vs ${y}`);
 	}
 	console.log(`${name}: ${str.length} chars, ${log.length} symbols`);
-	if (process.env.COST) console.log([...enc.cost].sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k}:${Math.round(v / Math.log2(90))}`).join(" "));
+	if (process.env.COST) console.log([...enc.cost].sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k}:${Math.round(v / Math.log2(93))}`).join(" "));
 	for (const [k, n] of sec.sizes) console.log(`  ${k.padEnd(12)} ${n}`);
 	return str;
 }

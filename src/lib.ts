@@ -39,19 +39,15 @@ export interface Label {
 // ************************************************************
 // data
 
-class Group {
-	constructor(
-		/** display name, eg. "Latin" or "Restricted[Xxxx]" */
-		readonly name: string,
-		readonly primary: Set<number>,
-		readonly secondary: Set<number>,
-		/** enforce non-spacing mark rules (not CM-whitelisted) */
-		readonly checkNSM: boolean,
-	) {}
-	has(cp: number) {
-		return this.primary.has(cp) || this.secondary.has(cp);
-	}
-}
+type Group = {
+	/** display name, eg. "Latin" or "Restricted[Xxxx]" */
+	name: string;
+	primary: Set<number>;
+	secondary: Set<number>;
+	/** enforce non-spacing mark rules (not CM-whitelisted) */
+	checkNSM: boolean;
+	has(cp: number): boolean;
+};
 
 /** a run of text (normalized) or a single emoji (styled) */
 type OutputToken = { cps: number[]; emoji?: boolean };
@@ -142,14 +138,15 @@ function readGroups(r: Reader): Group[] {
 		if (!letters.length) return groups;
 		letters[0] -= 32; // capitalize
 		const name = strFromCps(letters);
-		groups.push(
-			new Group(
-				groups.length < unrestricted ? name : `Restricted[${name}]`,
-				readChunked(Ctx.GROUP_PRIMARY),
-				readChunked(Ctx.GROUP_SECONDARY),
-				!!r.uint(Ctx.GROUP_NSM),
-			),
-		);
+		const primary = readChunked(Ctx.GROUP_PRIMARY);
+		const secondary = readChunked(Ctx.GROUP_SECONDARY);
+		groups.push({
+			name: groups.length < unrestricted ? name : `Restricted[${name}]`,
+			primary,
+			secondary,
+			checkNSM: !!r.uint(Ctx.GROUP_NSM),
+			has: (cp) => primary.has(cp) || secondary.has(cp),
+		});
 	}
 }
 
