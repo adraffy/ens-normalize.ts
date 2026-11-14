@@ -5,9 +5,9 @@ It's a port of the library part of [ens-normalize.js](https://github.com/adraffy
 
 | entry | min | gzip | ens-normalize.js 1.11.1 |
 |---|---:|---:|---:|
-| `ens-normalize-ts` (core) | 23.0 KB | 16.5 KB | 38.3 KB / 26.1 KB |
-| `ens-normalize-ts/xnf` (core, native NF) | 17.4 KB | 12.3 KB | 29.3 KB |
-| `ens-normalize-ts/full` (everything) | 24.9 KB | 17.6 KB | |
+| `ens-normalize-ts` (core) | 22.6 KB | 16.4 KB | 38.3 KB / 26.1 KB |
+| `ens-normalize-ts/xnf` (core, native NF) | 17.0 KB | 12.1 KB | 29.3 KB |
+| `ens-normalize-ts/full` (everything) | 25.0 KB | 17.6 KB | |
 
 ```ts
 import { ensNormalize, ensBeautify } from 'ens-normalize-ts';
@@ -23,18 +23,18 @@ ensBeautify('1⃣2⃣.eth');      // "1️⃣2️⃣.eth"
 | `ens_normalize` | `ensNormalize(name)` | core |
 | `ens_beautify` | `ensBeautify(name)` | core |
 | `ens_normalize_fragment` | `ensNormalizeFragment(frag, decompose?)` | core |
-| `ens_split` | `ensSplit(name, preserveEmoji?)` | core |
-| `ens_emoji` | `ensEmoji()` | core |
+| `ens_split` | `ensSplit(name, preserveEmoji?)` | full |
+| `ens_emoji` | `ensEmoji()` | full |
 | `nfc` / `nfd` | `nfc(cps)` / `nfd(cps)` | core |
 | `ens_tokenize` | `ensTokenize(name, {nf?})` | full |
 | `is_combining_mark` | `isCombiningMark(cp, onlyNSM?)` | full |
-| `should_escape` | `shouldEscape(cp)` | full |
+| `should_escape` | `shouldEscape(cp)` | core |
 | `safe_str_from_cps` | `safeStrFromCps(cps, max?, quoter?)` | full |
 | `explode_cp` / `str_from_cps` | `explodeCp(s)` / `strFromCps(cps)` | full |
 | `hex_cp` / `quote_cp` | `hexCp(cp)` / `quoteCp(cp)` | full |
 | `versions` | `versions` (`{derived, unicode, cldr, specHash, nfHash}`) | full |
 
-`full` re-exports everything in core.
+`xnf` has the same exports as core. `full` re-exports everything in core.
 
 Error messages and outputs match 1.11.1 exactly. Differences:
 - `Label.emoji` is `false` instead of `undefined` for text-only labels.
