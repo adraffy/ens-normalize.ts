@@ -5,8 +5,10 @@ import { createHash } from 'node:crypto';
 import { Encoder } from './encoder.ts';
 import { reader } from '../src/decoder.ts';
 import { Ctx } from '../src/contexts.ts';
+import { ensureData } from './download.ts';
 
 const ROOT = new URL('../', import.meta.url);
+await ensureData();
 const specBytes = await Bun.file(new URL('data/spec.json', ROOT)).bytes();
 const nfBytes = await Bun.file(new URL('data/nf.json', ROOT)).bytes();
 const spec = JSON.parse(new TextDecoder().decode(specBytes));

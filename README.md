@@ -47,11 +47,12 @@ It's smaller, but results depend on the JS engine's Unicode version.
 Requires [Bun](https://bun.sh).
 
 ```sh
-./scripts/download.sh # data/{spec,nf}.json + test/data/{tests,nf-tests}.json
-bun scripts/make.ts # data/*.json => src/generated/*.ts
-bun run build       # dist/ (esm + cjs, minified) + dist/types
-bun test
+bun scripts/make.ts   # data/*.json => src/generated/*.ts (downloads spec if missing)
+bun run build         # dist/ (esm + cjs, minified) + dist/types
+bun test              # downloads tests if missing
 ```
+
+The spec and test JSON aren't committed. They're fetched from ens-normalize.js, pinned to the commit in `scripts/download.ts`. Bump `UPSTREAM` there and run `bun run download` to update.
 
 ### Data encoding
 
