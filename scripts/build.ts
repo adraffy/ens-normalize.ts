@@ -2,6 +2,7 @@
 import { rm } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import type { BunPlugin } from 'bun';
+import { minify } from 'terser';
 
 const ROOT = new URL('../', import.meta.url).pathname;
 const DIST = `${ROOT}dist/`;
@@ -34,7 +35,14 @@ for (const [name, entry, plugins] of [
 			plugins: [...plugins],
 		});
 		if (!out.success) throw new AggregateError(out.logs, 'build failed');
-		const code = await out.outputs[0].text();
+		// terser after Bun's minifier saves ~2% more
+		const { code } = await minify(await out.outputs[0].text(), {
+			module: format === 'esm',
+			toplevel: true,
+			ecma: 2020,
+			compress: { passes: 3, unsafe: true, unsafe_arrows: true, pure_getters: true },
+		});
+		if (!code) throw new Error('terser failed');
 		await Bun.write(`${DIST}${name}.${ext}`, code);
 		sizes.push([`${name}.${ext}`, code.length, gzipSync(code, { level: 9 }).length]);
 	}

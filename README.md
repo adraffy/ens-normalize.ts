@@ -5,9 +5,9 @@ It's a port of the library part of [ens-normalize.js](https://github.com/adraffy
 
 | entry | min | gzip | ens-normalize.js 1.11.1 |
 |---|---:|---:|---:|
-| `ens-normalize-ts` (core) | 23.5 KB | 16.7 KB | 38.3 KB / 26.1 KB |
-| `ens-normalize-ts/xnf` (core, native NF) | 17.7 KB | 12.4 KB | 29.3 KB |
-| `ens-normalize-ts/full` (everything) | 25.4 KB | 17.8 KB | |
+| `ens-normalize-ts` (core) | 23.0 KB | 16.5 KB | 38.3 KB / 26.1 KB |
+| `ens-normalize-ts/xnf` (core, native NF) | 17.4 KB | 12.3 KB | 29.3 KB |
+| `ens-normalize-ts/full` (everything) | 24.9 KB | 17.6 KB | |
 
 ```ts
 import { ensNormalize, ensBeautify } from 'ens-normalize-ts';
@@ -51,7 +51,7 @@ Requires [Bun](https://bun.sh).
 
 ```sh
 bun scripts/make.ts   # data/*.json => src/generated/*.ts (downloads spec if missing)
-bun run build         # dist/ (esm + cjs, minified) + dist/types
+bun run build         # dist/ (esm + cjs, Bun + terser minified) + dist/types
 bun test              # downloads tests if missing
 ```
 
