@@ -1,0 +1,36 @@
+{
+	"name": "ens-normalize-ts",
+	"version": "0.1.0",
+	"description": "ENSIP-15 ENS Name Normalizer in TypeScript (zero dependencies)",
+	"keywords": ["ENS", "ENSIP-15", "Ethereum", "UTS-46", "Normalize", "NFC", "NFD"],
+	"license": "MIT",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/types/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		},
+		"./xnf": {
+			"types": "./dist/types/index.d.ts",
+			"import": "./dist/xnf.js",
+			"require": "./dist/xnf.cjs"
+		}
+	},
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"types": "./dist/types/index.d.ts",
+	"files": ["dist"],
+	"scripts": {
+		"download": "./download.sh",
+		"make": "bun scripts/make.ts",
+		"build": "bun scripts/build.ts",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.4.4",
+		"typescript": "^7.0.2"
+	}
+}
