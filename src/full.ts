@@ -1,6 +1,8 @@
 // everything: core + tokenizer + display/debug helpers + version info
 export * from './index.ts';
-export { isCombiningMark, shouldEscape, safeStrFromCps } from './lib.ts';
+export { safeStrFromCps } from './lib.ts';
+export { ensSplit, ensEmoji, isCombiningMark } from './extras.ts';
+export type { Label } from './extras.ts';
 export { ensTokenize } from './tokenize.ts';
 export type {
 	Token,

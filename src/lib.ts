@@ -4,7 +4,7 @@
 import ENS, { FENCED, NSM_MAX } from './generated/ens.ts';
 import { Ctx } from './contexts.ts';
 import { reader, readMapped, type Reader } from './decoder.ts';
-import { explodeCp, strFromCps, quoteCp, compareArrays } from './utils.ts';
+import { explodeCp, strFromCps, quoteCp } from './utils.ts';
 import { nfc, nfd } from './nf.ts';
 
 export { nfc, nfd };
@@ -14,27 +14,6 @@ const UNDERSCORE = 0x5f;
 const STOP_CH = '.';
 const FE0F = 0xfe0f;
 const UNIQUE = 1; // confusable placeholder: valid in exactly one group and not confusable
-
-// ************************************************************
-// types
-
-/** A label produced by {@link ensSplit}. */
-export interface Label {
-	/** input codepoints */
-	input: number[];
-	/** codepoint offset of this label in the name */
-	offset: number;
-	/** set if the label is invalid */
-	error?: Error;
-	/** text and emoji tokens */
-	tokens?: number[][];
-	/** normalized codepoints */
-	output?: number[];
-	/** label contains emoji */
-	emoji?: boolean;
-	/** script group: "ASCII", "Emoji", "Latin", "Restricted[Xxxx]", ... */
-	type?: string;
-}
 
 // ************************************************************
 // data
@@ -50,19 +29,19 @@ type Group = {
 };
 
 /** a run of text (normalized) or a single emoji (styled) */
-type OutputToken = { cps: number[]; emoji?: boolean };
+export type OutputToken = { cps: number[]; emoji?: boolean };
 
 type EmojiNode = Map<number, EmojiNode> & { emoji?: number[] };
 
 export let MAPPED: Map<number, number[]>;
 export let IGNORED: Set<number>;
-let CM: Set<number>;
-let NSM: Set<number>;
+export let CM: Set<number>;
+export let NSM: Set<number>;
 let ESCAPE: Set<number>;
 let GROUPS: Group[];
 export let VALID: Set<number>; // possibly valid: union of groups + decomposed parts
 let CONFUSABLES: Map<number, Set<Group> | typeof UNIQUE>; // cp => groups outside its confusable extent
-let EMOJI_LIST: number[][]; // fully-qualified
+export let EMOJI_LIST: number[][]; // fully-qualified, unsorted
 let EMOJI_ROOT: EmojiNode;
 
 function addMany<T>(set: Set<T>, v: Iterable<T>) {
@@ -99,7 +78,7 @@ export function init() {
 	// valid is closed under nfd
 	addMany(VALID, nfd(VALID));
 
-	EMOJI_LIST = readEmoji(r).sort(compareArrays);
+	EMOJI_LIST = readEmoji(r); // no two emoji differ only by FE0F, so order doesn't matter
 	EMOJI_ROOT = new Map();
 	for (const emoji of EMOJI_LIST) {
 		// FE0F is optional, but only where it appears in the fully-qualified sequence
@@ -220,7 +199,7 @@ function quotedCp(cp: number): string {
 // acquring the direction of the quote
 // https://www.w3.org/International/questions/qa-bidi-unicode-controls#exceptions
 function bidiQQ(s: string): string {
-	return `"${s}"‎`;
+	return `"${s}"\u200E`;
 }
 
 const errorPlacement = (where: string) => new Error(`illegal placement: ${where}`);
@@ -243,8 +222,9 @@ function errorMixture(g: Group, cp: number): Error {
  * (in HTML, call this then replace [<>&] with entities)
  */
 export function safeStrFromCps(cps: readonly number[], max = Infinity, quoter: (cp: number) => string = quoteCp): string {
+	init();
 	const buf: string[] = [];
-	if (isCombiningMark(cps[0])) buf.push('◌');
+	if (CM.has(cps[0])) buf.push('◌');
 	if (cps.length > max) {
 		max >>= 1;
 		cps = [...cps.slice(0, max), 0x2026, ...cps.slice(-max)];
@@ -253,7 +233,7 @@ export function safeStrFromCps(cps: readonly number[], max = Infinity, quoter: (
 	const n = cps.length;
 	for (let i = 0; i < n; i++) {
 		const cp = cps[i];
-		if (shouldEscape(cp)) {
+		if (ESCAPE.has(cp)) {
 			buf.push(strFromCps(cps.slice(prev, i)), quoter(cp));
 			prev = i + 1;
 		}
@@ -262,87 +242,85 @@ export function safeStrFromCps(cps: readonly number[], max = Infinity, quoter: (
 	return buf.join('');
 }
 
-/** true if `cp` is a combining mark (or only a non-spacing mark, if `onlyNSM`) */
-export function isCombiningMark(cp: number, onlyNSM?: boolean): boolean {
-	init();
-	return (onlyNSM ? NSM : CM).has(cp);
-}
-
 /** true if `cp` should be escaped when printed */
 export function shouldEscape(cp: number): boolean {
 	init();
 	return ESCAPE.has(cp);
 }
 
-/** all supported emoji, fully-qualified, ordered by length then lexicographically */
-export function ensEmoji(): number[][] {
-	init();
-	return EMOJI_LIST.map((x) => [...x]);
+/** normalize a name or throw */
+export function ensNormalize(name: string): string {
+	return transform(name, filterFE0F);
+}
+
+/** normalize a name for display (preserves emoji presentation, uses Ξ) or throw */
+export function ensBeautify(name: string): string {
+	return transform(name, (emoji) => emoji, (cps, type) => {
+		// update ethereum symbol: ξ => Ξ if not greek
+		if (type !== 'Greek') for (let i = 0; i < cps.length; i++) if (cps[i] == 0x3be) cps[i] = 0x39e;
+	});
 }
 
 /** normalize without validation (for partial input), optionally NFD */
 export function ensNormalizeFragment(frag: string, decompose?: boolean): string {
 	init();
-	const nf = decompose ? nfd : nfc;
 	return frag
 		.split(STOP_CH)
-		.map((label) => strFromCps(outputTokenize(explodeCp(label), nf, filterFE0F).flatMap((t) => t.cps)))
+		.map((label) => strFromCps(flat(outputTokenize(explodeCp(label), filterFE0F, decompose ? nfd : nfc))))
 		.join(STOP_CH);
 }
 
-/** normalize a name or throw */
-export function ensNormalize(name: string): string {
-	return flatten(split(name, nfc, filterFE0F));
-}
-
-/** normalize a name for display (preserves emoji presentation, uses Ξ) or throw */
-export function ensBeautify(name: string): string {
-	const labels = split(name, nfc, (x) => x);
-	for (const { type, output, error } of labels) {
-		if (error) break; // flatten will throw
-		// update ethereum symbol: ξ => Ξ if not greek
-		if (type !== 'Greek') {
-			for (let i = 0; i < output!.length; i++) if (output![i] == 0x3be) output![i] = 0x39e;
-		}
-	}
-	return flatten(labels);
-}
-
-/** split a name into labels with details (does not throw) */
-export function ensSplit(name: string, preserveEmoji?: boolean): Label[] {
-	return split(name, nfc, preserveEmoji ? (x) => x.slice() : filterFE0F);
-}
-
-type NF = (cps: number[]) => number[];
-type EmojiStyler = (emoji: number[]) => number[];
-
-function split(name: string, nf: NF, styler: EmojiStyler): Label[] {
-	if (!name) return []; // empty name allowance
+// tokenize + validate each label, then join
+// errors are prefixed with the label when the name has 2+ labels
+function transform(name: string, styler: EmojiStyler, fix?: (cps: number[], type: string) => void): string {
+	if (!name) return ''; // empty name allowance
 	init();
-	let offset = 0;
-	// https://unicode.org/reports/tr46/#Validity_Criteria
-	// 4.) "The label must not contain a U+002E ( . ) FULL STOP."
-	return name.split(STOP_CH).map((label) => {
-		const input = explodeCp(label);
-		const info: Label = { input, offset };
-		offset += input.length + 1; // + stop
-		try {
-			// 1.) "The label must be in Unicode Normalization Form NFC"
-			const tokens = outputTokenize(input, nf, styler);
-			const parts = (info.tokens = tokens.map((t) => t.cps));
-			if (!tokens.length) throw new Error('empty label'); // could of had ignored characters
-			const norm = (info.output = parts.flat());
-			checkLeadingUnderscore(norm);
-			info.type = checkValid(tokens, norm, (info.emoji = tokens.length > 1 || !!tokens[0].emoji));
-		} catch (err) {
-			info.error = err as Error;
-		}
-		return info;
-	});
+	const labels = name.split(STOP_CH);
+	return labels
+		.map((label) => {
+			const input = explodeCp(label);
+			try {
+				const tokens = outputTokenize(input, styler);
+				const norm = flat(tokens);
+				const type = checkLabel(tokens, norm);
+				fix?.(norm, type);
+				return strFromCps(norm);
+			} catch (err) {
+				const msg = (err as Error).message;
+				throw new Error(labels.length == 1 ? msg : `Invalid label ${bidiQQ(safeStrFromCps(input, 63))}: ${msg}`);
+			}
+		})
+		.join(STOP_CH);
+}
+
+// ************************************************************
+// validation
+
+export type EmojiStyler = (emoji: number[]) => number[];
+
+export const flat = (tokens: OutputToken[]) => tokens.flatMap((t) => t.cps);
+export const isEmojiLabel = (tokens: OutputToken[]) => tokens.length > 1 || !!tokens[0].emoji;
+
+// throws if invalid, returns the label type
+function checkLabel(tokens: OutputToken[], norm: number[]): string {
+	checkNotEmpty(tokens);
+	checkLeadingUnderscore(norm);
+	return checkValid(tokens, norm, isEmojiLabel(tokens));
+}
+
+// the label could have been only ignored characters
+export function checkNotEmpty(tokens: OutputToken[]) {
+	if (!tokens.length) throw new Error('empty label');
+}
+
+export function checkLeadingUnderscore(cps: number[]) {
+	for (let i = cps.lastIndexOf(UNDERSCORE); i > 0; ) {
+		if (cps[--i] !== UNDERSCORE) throw new Error('underscore allowed only at start');
+	}
 }
 
 // returns the label type
-function checkValid(tokens: OutputToken[], norm: number[], emoji: boolean): string {
+export function checkValid(tokens: OutputToken[], norm: number[], emoji: boolean): string {
 	if (!emoji && norm.every((cp) => cp < 0x80)) {
 		// fast path: ascii cant have fenced, cm, or wholes
 		checkLabelExtension(norm);
@@ -363,12 +341,6 @@ function checkValid(tokens: OutputToken[], norm: number[], emoji: boolean): stri
 function checkLabelExtension(cps: number[]) {
 	if (cps.length >= 4 && cps[2] == HYPHEN && cps[3] == HYPHEN) {
 		throw new Error(`invalid label extension: "${strFromCps(cps.slice(0, 4))}"`);
-	}
-}
-
-function checkLeadingUnderscore(cps: number[]) {
-	for (let i = cps.lastIndexOf(UNDERSCORE); i > 0; ) {
-		if (cps[--i] !== UNDERSCORE) throw new Error('underscore allowed only at start');
 	}
 }
 
@@ -468,20 +440,6 @@ function checkWhole(g: Group, unique: number[]) {
 	}
 }
 
-// throw on first error
-function flatten(labels: Label[]): string {
-	return labels
-		.map(({ input, error, output }) => {
-			if (error) {
-				// don't print label again if just a single label
-				const msg = error.message;
-				throw new Error(labels.length == 1 ? msg : `Invalid label ${bidiQQ(safeStrFromCps(input, 63))}: ${msg}`);
-			}
-			return strFromCps(output!);
-		})
-		.join(STOP_CH);
-}
-
 // find the longest emoji that starts at `pos`
 // returns [emoji, end] or undefined
 export function findEmoji(cps: number[], pos: number): [number[], number] | undefined {
@@ -495,7 +453,7 @@ export function findEmoji(cps: number[], pos: number): [number[], number] | unde
 
 // returns text and emoji tokens
 // eg. "abc💩d" => [{cps: [61, 62, 63]}, {cps: [1F4A9], emoji: true}, {cps: [64]}]
-function outputTokenize(cps: number[], nf: NF, styler: EmojiStyler): OutputToken[] {
+export function outputTokenize(cps: number[], styler: EmojiStyler, nf = nfc): OutputToken[] {
 	const tokens: OutputToken[] = [];
 	let buf: number[] = [];
 	for (let i = 0; i < cps.length; ) {
