@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { ensNormalize } from '../src/index.ts';
+import { ensNormalize } from '../src/full.ts';
 
 type Test = { name: string; norm?: string; error?: boolean; comment?: string };
 const tests: Test[] = await Bun.file(new URL('./data/tests.json', import.meta.url)).json();

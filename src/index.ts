@@ -1,27 +1,4 @@
-export {
-	ensNormalize,
-	ensBeautify,
-	ensNormalizeFragment,
-	ensSplit,
-	ensTokenize,
-	ensEmoji,
-	isCombiningMark,
-	shouldEscape,
-	safeStrFromCps,
-	nfc,
-	nfd,
-} from './lib.ts';
-export type {
-	Label,
-	Token,
-	TextToken,
-	StopToken,
-	DisallowedToken,
-	IgnoredToken,
-	ValidToken,
-	MappedToken,
-	EmojiToken,
-	NFCToken,
-} from './lib.ts';
-export { hexCp, quoteCp, explodeCp, strFromCps } from './utils.ts';
-export { versions } from './generated/version.ts';
+// core: normalize + beautify (and the cheap extras that reuse the same data)
+// see ./full.ts for ensTokenize and the display/debug helpers
+export { ensNormalize, ensBeautify, ensNormalizeFragment, ensSplit, ensEmoji, nfc, nfd } from './lib.ts';
+export type { Label } from './lib.ts';

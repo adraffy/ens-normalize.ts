@@ -11,7 +11,6 @@ export { nfc, nfd };
 
 const HYPHEN = 0x2d;
 const UNDERSCORE = 0x5f;
-const STOP = 0x2e;
 const STOP_CH = '.';
 const FE0F = 0xfe0f;
 const UNIQUE = 1; // confusable placeholder: valid in exactly one group and not confusable
@@ -37,46 +36,6 @@ export interface Label {
 	type?: string;
 }
 
-export interface StopToken {
-	type: 'stop';
-	cp: number;
-}
-export interface DisallowedToken {
-	type: 'disallowed';
-	cp: number;
-}
-export interface IgnoredToken {
-	type: 'ignored';
-	cp: number;
-}
-export interface ValidToken {
-	type: 'valid';
-	cps: number[];
-}
-export interface MappedToken {
-	type: 'mapped';
-	cp: number;
-	cps: number[];
-}
-export type TextToken = DisallowedToken | IgnoredToken | ValidToken | MappedToken;
-export interface EmojiToken {
-	type: 'emoji';
-	/** matched input codepoints */
-	input: number[];
-	/** normalized (FE0F removed) */
-	cps: number[];
-	/** fully-qualified emoji */
-	emoji: number[];
-}
-export interface NFCToken {
-	type: 'nfc';
-	input: number[];
-	tokens0: TextToken[];
-	cps: number[];
-	tokens: TextToken[];
-}
-export type Token = TextToken | EmojiToken | NFCToken | StopToken;
-
 // ************************************************************
 // data
 
@@ -99,14 +58,13 @@ type OutputToken = { cps: number[]; emoji?: boolean };
 
 type EmojiNode = Map<number, EmojiNode> & { emoji?: number[] };
 
-let MAPPED: Map<number, number[]>;
-let IGNORED: Set<number>;
+export let MAPPED: Map<number, number[]>;
+export let IGNORED: Set<number>;
 let CM: Set<number>;
 let NSM: Set<number>;
 let ESCAPE: Set<number>;
-let NFC_CHECK: Set<number>;
 let GROUPS: Group[];
-let VALID: Set<number>; // possibly valid: union of groups + decomposed parts
+export let VALID: Set<number>; // possibly valid: union of groups + decomposed parts
 let CONFUSABLES: Map<number, Set<Group> | typeof UNIQUE>; // cp => groups outside its confusable extent
 let EMOJI_LIST: number[][]; // fully-qualified
 let EMOJI_ROOT: EmojiNode;
@@ -115,7 +73,7 @@ function addMany<T>(set: Set<T>, v: Iterable<T>) {
 	for (const x of v) set.add(x);
 }
 
-function init() {
+export function init() {
 	if (MAPPED) return;
 	const r = reader(ENS);
 
@@ -126,7 +84,6 @@ function init() {
 	CM = new Set(cm);
 	NSM = new Set(r.set(Ctx.NSM).map((i) => cm[i]));
 	ESCAPE = new Set(r.set(Ctx.ESCAPE)); // characters that should not be printed
-	NFC_CHECK = new Set(r.set(Ctx.NFC_CHECK)); // only needed by ensTokenize()
 	GROUPS = readGroups(r);
 
 	// valid = union of groups
@@ -530,7 +487,7 @@ function flatten(labels: Label[]): string {
 
 // find the longest emoji that starts at `pos`
 // returns [emoji, end] or undefined
-function findEmoji(cps: number[], pos: number): [number[], number] | undefined {
+export function findEmoji(cps: number[], pos: number): [number[], number] | undefined {
 	let node: EmojiNode | undefined = EMOJI_ROOT;
 	let found: [number[], number] | undefined;
 	while (pos < cps.length && (node = node.get(cps[pos++]))) {
@@ -571,101 +528,6 @@ function outputTokenize(cps: number[], nf: NF, styler: EmojiStyler): OutputToken
 	return tokens;
 }
 
-function filterFE0F(cps: number[]): number[] {
+export function filterFE0F(cps: number[]): number[] {
 	return cps.filter((cp) => cp != FE0F);
-}
-
-// ************************************************************
-// tokenizer
-
-/**
- * Tokenize a name (does not throw).
- * With `nf` (default), unnormalized runs are collapsed into a single "nfc" token.
- */
-export function ensTokenize(name: string, { nf = true }: { nf?: boolean } = {}): Token[] {
-	init();
-	const cps = explodeCp(name);
-	const tokens: Token[] = [];
-	for (let i = 0; i < cps.length; ) {
-		const match = findEmoji(cps, i);
-		if (match) {
-			const [emoji, end] = match;
-			tokens.push({ type: 'emoji', emoji: [...emoji], input: cps.slice(i, end), cps: filterFE0F(emoji) });
-			i = end;
-		} else {
-			const cp = cps[i++];
-			if (cp == STOP) {
-				tokens.push({ type: 'stop', cp });
-			} else if (VALID.has(cp)) {
-				tokens.push({ type: 'valid', cps: [cp] });
-			} else if (IGNORED.has(cp)) {
-				tokens.push({ type: 'ignored', cp });
-			} else {
-				const mapped = MAPPED.get(cp);
-				tokens.push(mapped ? { type: 'mapped', cp, cps: mapped.slice() } : { type: 'disallowed', cp });
-			}
-		}
-	}
-	if (nf) {
-		for (let i = 0, start = -1; i < tokens.length; i++) {
-			const token = tokens[i];
-			if (isText(token)) {
-				if (requiresCheck(token.cps)) {
-					// normalization might be needed: find adjacent text
-					let end = i + 1;
-					for (let pos = end; pos < tokens.length; pos++) {
-						const t = tokens[pos];
-						if (isText(t)) {
-							if (!requiresCheck(t.cps)) break;
-							end = pos + 1;
-						} else if (t.type !== 'ignored') {
-							break;
-						}
-					}
-					if (start < 0) start = i;
-					const slice = tokens.slice(start, end);
-					const input = slice.flatMap((t) => (isText(t) ? t.cps : [])); // strip junk tokens
-					const cps = nfc(input);
-					if (compareArrays(cps, input)) {
-						// bundle into an nfc token: tokens0 ==(process)=> input ==(nfc)=> tokens/cps
-						tokens.splice(start, end - start, {
-							type: 'nfc',
-							input,
-							cps,
-							tokens0: collapseValidTokens(slice) as TextToken[],
-							tokens: ensTokenize(strFromCps(cps), { nf: false }) as TextToken[],
-						});
-						i = start;
-					} else {
-						i = end - 1; // skip to end of slice
-					}
-					start = -1;
-				} else {
-					start = i; // remember last
-				}
-			} else if (token.type !== 'ignored') {
-				start = -1;
-			}
-		}
-	}
-	return collapseValidTokens(tokens);
-}
-
-function isText(t: Token): t is ValidToken | MappedToken {
-	return t.type == 'valid' || t.type == 'mapped';
-}
-
-function requiresCheck(cps: number[]): boolean {
-	return cps.some((cp) => NFC_CHECK.has(cp));
-}
-
-function collapseValidTokens(tokens: Token[]): Token[] {
-	for (let i = 0; i < tokens.length; i++) {
-		if (tokens[i].type == 'valid') {
-			let j = i + 1;
-			while (j < tokens.length && tokens[j].type == 'valid') j++;
-			tokens.splice(i, j - i, { type: 'valid', cps: tokens.slice(i, j).flatMap((t) => (t as ValidToken).cps) });
-		}
-	}
-	return tokens;
 }

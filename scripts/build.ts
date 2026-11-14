@@ -17,16 +17,17 @@ const nativeNF: BunPlugin = {
 await rm(DIST, { recursive: true, force: true });
 
 const sizes: [string, number, number][] = [];
-for (const [name, plugins] of [
-	['index', []],
-	['xnf', [nativeNF]],
+for (const [name, entry, plugins] of [
+	['index', 'index', []],
+	['xnf', 'index', [nativeNF]],
+	['full', 'full', []],
 ] as const) {
 	for (const [format, ext] of [
 		['esm', 'js'],
 		['cjs', 'cjs'],
 	] as const) {
 		const out = await Bun.build({
-			entrypoints: [`${ROOT}src/index.ts`],
+			entrypoints: [`${ROOT}src/${entry}.ts`],
 			format,
 			target: 'browser',
 			minify: true,

@@ -16,6 +16,11 @@
 			"types": "./dist/types/index.d.ts",
 			"import": "./dist/xnf.js",
 			"require": "./dist/xnf.cjs"
+		},
+		"./full": {
+			"types": "./dist/types/full.d.ts",
+			"import": "./dist/full.js",
+			"require": "./dist/full.cjs"
 		}
 	},
 	"main": "./dist/index.cjs",

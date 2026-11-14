@@ -1,6 +1,6 @@
 // parity with @adraffy/ens-normalize@1.11.1 (fixture generated from that library)
 import { test, expect } from 'bun:test';
-import * as lib from '../src/index.ts';
+import * as lib from '../src/full.ts';
 
 type Case = { name: string; [k: string]: unknown };
 const cases: Case[] = await Bun.file(new URL('./data/api.json', import.meta.url)).json();
