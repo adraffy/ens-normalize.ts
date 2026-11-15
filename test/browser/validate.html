@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validation Tests</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+	<h1>Validation Tests <small><a href="./">ens-normalize.ts</a></small></h1>
+	<div class="meta" id="meta"></div>
+	<div class="status" id="status"></div>
+	<div class="card">
+		<table>
+			<thead>
+				<tr><th>Bundle</th><th class="num">Passed</th><th class="num">Failed</th><th class="num">Time</th><th>Notes</th></tr>
+			</thead>
+			<tbody id="results"></tbody>
+		</table>
+	</div>
+	<div class="card" id="failures" hidden></div>
+	<div id="actions"></div>
+</main>
+<script type="module">
+import { el, fetchJSON, tick, downloadButton, setStatus, hexSeq } from './common.js';
+
+// each shipped bundle, run against the same tests
+const BUILDS = [
+	{ name: 'core', file: '../../dist/index.js' },
+	{ name: 'xnf', file: '../../dist/xnf.js', note: "NFC/NFD from this browser's String.prototype.normalize()" },
+	{ name: 'full', file: '../../dist/full.js' },
+];
+const CHUNK = 2000; // tests between yields
+
+const status = document.querySelector('#status');
+const results = document.querySelector('#results');
+
+try {
+	setStatus(status, 'wait', 'Loading…');
+	const { ensBuildInfo } = await import('../../dist/full.js');
+	showMeta(ensBuildInfo);
+	const tests = await fetchJSON('../data/tests.json');
+	const failures = [];
+	for (const build of BUILDS) {
+		const row = el('tr', {}, el('td', {}, el('code', {}, build.name)), el('td', { class: 'num' }, '…'), el('td', { class: 'num' }), el('td', { class: 'num' }), el('td', { class: 'note' }, build.note));
+		results.append(row);
+		const { ensNormalize } = await import(build.file);
+		const errors = await run(ensNormalize, tests, build.name, (done) => (row.children[1].textContent = `${done} / ${tests.length}`));
+		row.children[1].textContent = String(tests.length - errors.list.length);
+		row.children[2].replaceChildren(el('span', { class: errors.list.length ? 'bad' : 'ok' }, String(errors.list.length)));
+		row.children[3].textContent = `${Math.round(errors.time)} ms`;
+		failures.push(...errors.list);
+	}
+	if (failures.length) {
+		setStatus(status, 'fail', `${failures.length} failures`);
+		showFailures(failures);
+		document.querySelector('#actions').append(downloadButton('errors.json', { failures, ensBuildInfo, userAgent: navigator.userAgent }));
+	} else {
+		setStatus(status, 'pass', [el('b', {}, String(tests.length)), ` tests passed in ${BUILDS.length} bundles`]);
+	}
+} catch (err) {
+	setStatus(status, 'fail', err.message);
+	console.error(err);
+}
+
+// returns failures and the time spent normalizing (excludes yields)
+async function run(ensNormalize, tests, build, progress) {
+	const list = [];
+	let time = 0;
+	for (let i = 0; i < tests.length; i += CHUNK) {
+		const t0 = performance.now();
+		for (const { name, norm = name, error } of tests.slice(i, i + CHUNK)) {
+			let result, message;
+			try {
+				result = ensNormalize(name);
+			} catch (err) {
+				message = err.message;
+			}
+			if (error ? message === undefined : result !== norm) {
+				list.push({ build, name, expected: error ? 'error' : norm, result: message === undefined ? result : `error: ${message}` });
+			}
+		}
+		time += performance.now() - t0;
+		progress(Math.min(i + CHUNK, tests.length));
+		await tick();
+	}
+	return { list, time };
+}
+
+function showMeta(info) {
+	document.querySelector('#meta').append(
+		el('span', {}, 'Unicode ', el('b', {}, info.unicode.split(' ')[0])),
+		el('span', {}, 'CLDR ', el('b', {}, info.cldr.split(' ')[0])),
+		el('span', {}, 'derived ', new Date(info.derived).toLocaleDateString()),
+		el('span', {}, 'spec ', el('code', {}, info.specHash.slice(0, 16) + '…')),
+	);
+}
+
+function showFailures(failures) {
+	const MAX = 200;
+	const node = document.querySelector('#failures');
+	const tbody = el('tbody');
+	for (const f of failures.slice(0, MAX)) {
+		tbody.append(
+			el(
+				'tr',
+				{},
+				el('td', {}, el('code', {}, f.build)),
+				el('td', {}, f.name, el('div', { class: 'note mono' }, hexSeq(f.name))),
+				el('td', {}, f.expected),
+				el('td', { class: 'bad' }, f.result),
+			),
+		);
+	}
+	node.append(
+		el('table', {}, el('thead', {}, el('tr', {}, ...['Bundle', 'Name', 'Expected', 'Got'].map((s) => el('th', {}, s)))), tbody),
+		failures.length > MAX ? el('p', { class: 'note' }, `…and ${failures.length - MAX} more (see errors.json)`) : undefined,
+	);
+	node.hidden = false;
+}
+</script>
+</body>
+</html>

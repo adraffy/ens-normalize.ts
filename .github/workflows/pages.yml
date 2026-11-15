@@ -1,0 +1,56 @@
+name: pages
+
+# publishes the in-browser tests (test/browser/) to GitHub Pages
+# the site mirrors the repo layout so the pages' relative paths work:
+#   dist/            built bundles
+#   test/data/       downloaded test data
+#   test/browser/    the pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bun scripts/download.ts
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site/test
+          cp -r dist _site/dist
+          cp -r test/data _site/test/data
+          cp -r test/browser _site/test/browser
+          printf '<!doctype html><meta http-equiv="refresh" content="0; url=test/browser/">\n' > _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

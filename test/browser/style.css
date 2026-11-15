@@ -1,0 +1,159 @@
+:root {
+	--bg: #fafaf7;
+	--fg: #1c1c1a;
+	--muted: #6b6b66;
+	--card: #fff;
+	--line: #e3e3dc;
+	--pass: #1f8a4c;
+	--pass-bg: #e3f5ea;
+	--fail: #c62828;
+	--fail-bg: #fde8e8;
+	--wait-bg: #fff6d6;
+	--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #161615;
+		--fg: #ededea;
+		--muted: #9a9a93;
+		--card: #1f1f1d;
+		--line: #33332f;
+		--pass: #5fd08e;
+		--pass-bg: #17321f;
+		--fail: #ff7a7a;
+		--fail-bg: #3a1a1a;
+		--wait-bg: #36301a;
+	}
+}
+* {
+	box-sizing: border-box;
+}
+body {
+	margin: 0;
+	padding: 2rem 1rem 4rem;
+	background: var(--bg);
+	color: var(--fg);
+	font: 15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif;
+}
+main {
+	max-width: 960px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+h1 {
+	margin: 0;
+	font-size: 1.6rem;
+}
+h1 small {
+	color: var(--muted);
+	font-weight: normal;
+	font-size: 1rem;
+	margin-left: 0.5rem;
+}
+a {
+	color: inherit;
+}
+.meta {
+	color: var(--muted);
+	font-size: 0.85rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 1.25rem;
+}
+.meta code,
+.mono {
+	font-family: var(--mono);
+	font-size: 0.85em;
+}
+.status {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem 1.25rem;
+	border-radius: 0.75rem;
+	background: var(--wait-bg);
+	font-size: 1.1rem;
+}
+.status .icon {
+	font-size: 2.5rem;
+	line-height: 1;
+}
+.status.pass {
+	background: var(--pass-bg);
+}
+.status.fail {
+	background: var(--fail-bg);
+}
+.card {
+	background: var(--card);
+	border: 1px solid var(--line);
+	border-radius: 0.75rem;
+	overflow-x: auto;
+}
+table {
+	width: 100%;
+	border-collapse: collapse;
+}
+th,
+td {
+	padding: 0.5rem 0.75rem;
+	border-bottom: 1px solid var(--line);
+	text-align: left;
+	vertical-align: top;
+}
+tr:last-child td {
+	border-bottom: none;
+}
+th {
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--muted);
+	font-weight: 600;
+}
+td.num,
+th.num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.ok {
+	color: var(--pass);
+	font-weight: 600;
+}
+.bad {
+	color: var(--fail);
+	font-weight: 600;
+}
+details {
+	border-top: 1px solid var(--line);
+}
+details:first-child {
+	border-top: none;
+}
+summary {
+	padding: 0.6rem 0.75rem;
+	cursor: pointer;
+	font-weight: 600;
+}
+details table {
+	font-size: 0.85rem;
+}
+progress {
+	width: 12rem;
+}
+button {
+	font: inherit;
+	padding: 0.4rem 0.9rem;
+	border-radius: 0.5rem;
+	border: 1px solid var(--line);
+	background: var(--card);
+	color: var(--fg);
+	cursor: pointer;
+}
+.note {
+	color: var(--muted);
+	font-size: 0.85rem;
+}

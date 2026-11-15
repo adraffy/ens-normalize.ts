@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Browser Tests</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+	<h1>ens-normalize.ts <small>browser tests</small></h1>
+	<div class="card">
+		<table>
+			<tr><td><a href="validate.html">validate.html</a></td><td>ENSIP-15 validation tests against each built bundle (core, xnf, full)</td></tr>
+			<tr><td><a href="report-nf.html">report-nf.html</a></td><td>Unicode NormalizationTest: the library's NFC/NFD vs this browser's <code>String.prototype.normalize</code></td></tr>
+		</table>
+	</div>
+	<p class="note">Static pages. They load <code>../../dist/</code> and <code>../data/</code>, so the site layout mirrors the repo. GitHub Pages builds that layout in <code>.github/workflows/pages.yml</code>.</p>
+</main>
+</body>
+</html>

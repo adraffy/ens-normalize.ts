@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Normalization Report</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+	<h1>Normalization Report <small><a href="./">ens-normalize.ts</a></small></h1>
+	<div class="meta" id="meta"></div>
+	<div class="status" id="status"></div>
+	<div class="card">
+		<table>
+			<thead>
+				<tr>
+					<th>Section</th>
+					<th class="num">Cases</th>
+					<th class="num">Library NFD</th>
+					<th class="num">Library NFC</th>
+					<th class="num">Browser NFD</th>
+					<th class="num">Browser NFC</th>
+				</tr>
+			</thead>
+			<tbody id="summary"></tbody>
+		</table>
+	</div>
+	<p class="note">Library is the embedded NFC/NFD (core and full). Browser is <code>String.prototype.normalize()</code> (what the xnf bundle uses), so its result depends on this browser's Unicode version.</p>
+	<div class="card" id="failures" hidden></div>
+	<div id="actions"></div>
+</main>
+<script type="module">
+import { el, fetchJSON, tick, downloadButton, setStatus, hexSeq } from './common.js';
+
+const status = document.querySelector('#status');
+const summary = document.querySelector('#summary');
+
+const IMPLS = [
+	['library', 'nfd'],
+	['library', 'nfc'],
+	['browser', 'nfd'],
+	['browser', 'nfc'],
+];
+
+try {
+	setStatus(status, 'wait', 'Loading…');
+	const { nfc, nfd, explodeCp, strFromCps, ensBuildInfo } = await import('../../dist/full.js');
+	const version = ensBuildInfo.unicode.split(' ')[0];
+	document.querySelector('#meta').append(
+		el('span', {}, 'Unicode ', el('b', {}, version), ' ', el('a', { href: `https://www.unicode.org/Public/${version}/ucd/NormalizationTest.txt`, target: '_blank' }, 'NormalizationTest.txt')),
+		el('span', {}, navigator.userAgent),
+	);
+	const run = {
+		library: { nfd: (s) => strFromCps(nfd(explodeCp(s))), nfc: (s) => strFromCps(nfc(explodeCp(s))) },
+		browser: { nfd: (s) => s.normalize('NFD'), nfc: (s) => s.normalize('NFC') },
+	};
+
+	// largest sections first, like the original report
+	const sections = Object.entries(await fetchJSON('../data/nf-tests.json')).sort((a, b) => b[1].length - a[1].length);
+	const failures = [];
+	const totals = { library: 0, browser: 0 };
+	for (const [section, cases] of sections) {
+		const counts = IMPLS.map(() => 0);
+		const t0 = performance.now();
+		for (const [input, nfd0, nfc0] of cases) {
+			IMPLS.forEach(([impl, form], i) => {
+				const expected = form == 'nfd' ? nfd0 : nfc0;
+				const result = run[impl][form](input);
+				if (result !== expected) {
+					counts[i]++;
+					totals[impl]++;
+					failures.push({ section, impl, form, input, expected, result });
+				}
+			});
+		}
+		summary.append(
+			el(
+				'tr',
+				{ title: `${Math.round(performance.now() - t0)} ms` },
+				el('td', {}, section),
+				el('td', { class: 'num' }, String(cases.length)),
+				...counts.map((n) => el('td', { class: 'num' }, el('span', { class: n ? 'bad' : 'ok' }, String(n)))),
+			),
+		);
+		await tick();
+	}
+
+	const verdict = (impl) => (totals[impl] ? `${impl}: ${totals[impl]} failures` : `${impl}: all pass`);
+	if (totals.library) {
+		setStatus(status, 'fail', `${verdict('library')} · ${verdict('browser')}`);
+	} else {
+		// the library is what this report checks; browser failures are informational
+		setStatus(status, 'pass', `${verdict('library')} · ${verdict('browser')}`);
+	}
+	if (failures.length) {
+		showFailures(failures);
+		document.querySelector('#actions').append(downloadButton('nf-failures.json', { failures, ensBuildInfo, userAgent: navigator.userAgent }));
+	}
+} catch (err) {
+	setStatus(status, 'fail', err.message);
+	console.error(err);
+}
+
+// mismatches grouped by section, collapsed
+function showFailures(failures) {
+	const MAX = 100; // rows per section
+	const node = document.querySelector('#failures');
+	const bySection = new Map();
+	for (const f of failures) bySection.set(f.section, [...(bySection.get(f.section) ?? []), f]);
+	for (const [section, list] of bySection) {
+		const tbody = el('tbody');
+		for (const f of list.slice(0, MAX)) {
+			tbody.append(
+				el(
+					'tr',
+					{},
+					el('td', {}, `${f.impl} ${f.form.toUpperCase()}`),
+					el('td', { class: 'mono' }, hexSeq(f.input)),
+					el('td', { class: 'mono' }, hexSeq(f.expected)),
+					el('td', { class: 'mono bad' }, hexSeq(f.result)),
+				),
+			);
+		}
+		node.append(
+			el(
+				'details',
+				{},
+				el('summary', {}, `${section} (${list.length})`),
+				el('table', {}, el('thead', {}, el('tr', {}, ...['Impl', 'Input', 'Expected', 'Got'].map((s) => el('th', {}, s)))), tbody),
+				list.length > MAX ? el('p', { class: 'note' }, `…and ${list.length - MAX} more (see nf-failures.json)`) : undefined,
+			),
+		);
+	}
+	node.hidden = false;
+}
+</script>
+</body>
+</html>

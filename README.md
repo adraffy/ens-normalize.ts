@@ -157,7 +157,14 @@ NFC/NFD is a streaming pipeline (decompose → reorder → compose) that only bu
 `@adraffy/ens-normalize.ts/xnf` swaps the embedded NFC/NFD for `String.prototype.normalize()`.
 It's smaller, but results depend on the JS engine's Unicode version.
 
-## Development
+## Browser tests
+
+Static pages in `test/browser/`, published to GitHub Pages at [adraffy.github.io/ens-normalize.ts](https://adraffy.github.io/ens-normalize.ts/):
+- **validate.html** runs the ENSIP-15 validation tests against each bundle (core, xnf, full). xnf uses the browser's own NFC/NFD, so this shows whether a given browser's Unicode tables are current.
+- **report-nf.html** runs Unicode's NormalizationTest against the library's NFC/NFD and the browser's `String.prototype.normalize()`.
+
+`.github/workflows/pages.yml` builds `dist/`, downloads the test data, and publishes a site that mirrors the repo layout, so the pages' relative paths work. To run them locally, build and download the data, then serve the repo root with any static file server (for example `python3 -m http.server`) and open `/test/browser/`.
+
 
 Requires [Bun](https://bun.sh).
 
