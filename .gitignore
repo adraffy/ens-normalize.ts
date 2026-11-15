@@ -1,6 +1,6 @@
 node_modules/
 dist/
 .DS_Store
+# downloaded by scripts/download.ts
 data/
-test/data/tests.json
-test/data/nf-tests.json
+test/data/

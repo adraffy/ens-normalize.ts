@@ -31,7 +31,7 @@ function legacy({ input, tokens }: Tokenized): unknown[] {
 }
 
 type Case = { name: string; [k: string]: unknown };
-const cases: Case[] = await Bun.file(new URL('./data/api.json', import.meta.url)).json();
+const cases: Case[] = await Bun.file(new URL('./fixtures/api-1.11.1.json', import.meta.url)).json();
 
 const run = (f: () => unknown) => {
 	try {
