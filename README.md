@@ -1,9 +1,12 @@
 # ens-normalize.ts
 
 [![test](https://github.com/adraffy/ens-normalize.ts/actions/workflows/test.yml/badge.svg)](https://github.com/adraffy/ens-normalize.ts/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/@adraffy/ens-normalize.ts)](https://www.npmjs.com/package/@adraffy/ens-normalize.ts)
 
 [ENSIP-15](https://docs.ens.domains/ensip/15) ENS name normalization in TypeScript.
 It's a port of the library part of [ens-normalize.js](https://github.com/adraffy/ens-normalize.js), with no runtime dependencies.
+
+Run the tests in your browser: [validate](https://adraffy.github.io/ens-normalize.ts/test/browser/validate.html) · [report-nf](https://adraffy.github.io/ens-normalize.ts/test/browser/report-nf.html)
 
 ```ts
 import { ensNormalize, ensNormalizeFragment } from '@adraffy/ens-normalize.ts';
@@ -167,8 +170,8 @@ It's smaller, but results depend on the JS engine's Unicode version.
 ## Browser tests
 
 Static pages in `test/browser/`, published to GitHub Pages at [adraffy.github.io/ens-normalize.ts](https://adraffy.github.io/ens-normalize.ts/):
-- **validate.html** runs the ENSIP-15 validation tests against each bundle (core, xnf, full). xnf uses the browser's own NFC/NFD, so this shows whether a given browser's Unicode tables are current.
-- **report-nf.html** runs Unicode's NormalizationTest against the library's NFC/NFD and the browser's `String.prototype.normalize()`.
+- **[validate.html](https://adraffy.github.io/ens-normalize.ts/test/browser/validate.html)** runs the ENSIP-15 validation tests against each bundle (core, xnf, full). xnf uses the browser's own NFC/NFD, so this shows whether a given browser's Unicode tables are current.
+- **[report-nf.html](https://adraffy.github.io/ens-normalize.ts/test/browser/report-nf.html)** runs Unicode's NormalizationTest against the library's NFC/NFD and the browser's `String.prototype.normalize()`.
 
 `.github/workflows/pages.yml` builds `dist/`, downloads the test data, and publishes a site that mirrors the repo layout, so the pages' relative paths work. To run them locally, build and download the data, then serve the repo root with any static file server (for example `python3 -m http.server`) and open `/test/browser/`.
 
