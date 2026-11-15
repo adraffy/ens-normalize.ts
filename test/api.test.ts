@@ -21,10 +21,10 @@ function legacy({ input, tokens }: Tokenized): unknown[] {
 			case 'nfc':
 				return {
 					type: t.type,
-					input: t.parts.flatMap((p) => (p.type == 'valid' || p.type == 'mapped' ? p.output : [])),
+					input: t.before.flatMap((p) => (p.type == 'valid' || p.type == 'mapped' ? p.output : [])),
 					cps: t.output,
-					tokens0: legacy({ input, tokens: t.parts }),
-					tokens: legacy(lib.ensTokenize(lib.strFromCps(t.output), { nfc: false })),
+					tokens0: legacy({ input, tokens: t.before }),
+					tokens: legacy({ input: t.output, tokens: t.after }),
 				};
 		}
 	});

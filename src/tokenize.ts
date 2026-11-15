@@ -42,8 +42,13 @@ export interface EmojiToken extends BaseToken {
 /** a run of valid and mapped text whose output changed under NFC */
 export interface NFCToken extends BaseToken {
 	type: 'nfc';
-	/** the tokens before NFC (valid, mapped, and ignored) */
-	parts: TextToken[];
+	/** the tokens before NFC (valid, mapped, ignored), positioned in {@link Tokenized.input} */
+	before: TextToken[];
+	/**
+	 * the tokens of `output` (after NFC), positioned in `output`, not input.
+	 * Usually one valid run; a composed codepoint can be disallowed.
+	 */
+	after: Token[];
 }
 
 export type Token = TextToken | EmojiToken | NFCToken;
@@ -67,7 +72,14 @@ export function ensTokenize(name: string, { nfc: collapse = true }: TokenizeOpti
 	init();
 	NFC_CHECK ??= new Set(reader(NFC_CHECK_DATA).set(Ctx.NFC_CHECK));
 	const input = explodeCp(name);
-	let tokens: Token[] = [];
+	let tokens = tokenize(input);
+	if (collapse) tokens = collapseNFC(tokens);
+	return { input, tokens: collapseValid(tokens) };
+}
+
+// one token per codepoint (or emoji)
+function tokenize(input: number[]): Token[] {
+	const tokens: Token[] = [];
 	for (let start = 0; start < input.length; ) {
 		const match = findEmoji(input, start);
 		if (match) {
@@ -86,8 +98,7 @@ export function ensTokenize(name: string, { nfc: collapse = true }: TokenizeOpti
 		else token('disallowed');
 		start++;
 	}
-	if (collapse) tokens = collapseNFC(tokens);
-	return { input, tokens: collapseValid(tokens) };
+	return tokens;
 }
 
 const isText = (t: Token) => t.type == 'valid' || t.type == 'mapped';
@@ -113,16 +124,17 @@ function collapseNFC(tokens: Token[]): Token[] {
 					}
 				}
 				if (start < 0) start = i;
-				const parts = tokens.slice(start, end) as TextToken[];
-				const before = parts.flatMap((t) => (isText(t) ? t.output : []));
-				const output = nfc(before);
-				if (compareArrays(output, before)) {
+				const before = tokens.slice(start, end) as TextToken[];
+				const cps = before.flatMap((t) => (isText(t) ? t.output : []));
+				const output = nfc(cps);
+				if (compareArrays(output, cps)) {
 					tokens.splice(start, end - start, {
 						type: 'nfc',
-						start: parts[0].start,
-						end: parts[parts.length - 1].end,
+						start: before[0].start,
+						end: before[before.length - 1].end,
 						output,
-						parts: collapseValid(parts) as TextToken[],
+						before: collapseValid(before) as TextToken[],
+						after: collapseValid(tokenize(output)),
 					});
 					i = start;
 				} else {

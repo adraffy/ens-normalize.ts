@@ -120,19 +120,24 @@ type Tokenized = {
 type Token = { start: number; end: number; output: number[] } & (
 	| { type: 'valid' | 'mapped' | 'ignored' | 'disallowed' | 'stop' }
 	| { type: 'emoji'; beautified: number[] } // fully-qualified form; output drops FE0F
-	| { type: 'nfc'; parts: Token[] } // a text run that changed under NFC, and its tokens before NFC
+	| { type: 'nfc'; before: Token[]; after: Token[] } // a text run that changed under NFC
 );
 ```
 
 It never throws and doesn't validate. The tokens cover `input` in order with no gaps. Concatenating every `output` gives the same result as `ensNormalizeFragment` (except that disallowed characters output nothing instead of throwing). `valid` tokens are runs; every other text token is one codepoint. Pass `{ nfc: false }` to skip creating `nfc` tokens.
 
+An `nfc` token has two views. `before` holds the tokens that went into NFC, positioned in `input`. `after` holds the tokens of its `output`, positioned in `output`. `after` is usually one valid run, but a composed codepoint can be disallowed: `е` + U+0300 composes to U+0450, which ENS doesn't allow.
+
 ```ts
 ensTokenize('A\u0301b💩.');
 // input: [0x41, 0x301, 0x62, 0x1F4A9, 0x2E]
 // tokens:
-//   { type: 'nfc', start: 0, end: 2, output: [0xE1], parts: [
+//   { type: 'nfc', start: 0, end: 2, output: [0xE1],
+//     before: [
 //       { type: 'mapped', start: 0, end: 1, output: [0x61] },
-//       { type: 'valid', start: 1, end: 2, output: [0x301] } ] }
+//       { type: 'valid', start: 1, end: 2, output: [0x301] } ],
+//     after: [
+//       { type: 'valid', start: 0, end: 1, output: [0xE1] } ] }
 //   { type: 'valid', start: 2, end: 3, output: [0x62] }
 //   { type: 'emoji', start: 3, end: 4, output: [0x1F4A9], beautified: [0x1F4A9, 0xFE0F] }
 //   { type: 'stop', start: 4, end: 5, output: [0x2E] }
