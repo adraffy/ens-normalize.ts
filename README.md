@@ -79,9 +79,9 @@ ensNormalizeFragment('é', true); // "e\u0301"
 
 | entry | min | gzip | 1.11.1 min | 1.11.1 gzip |
 |---|---:|---:|---:|---:|
-| `@adraffy/ens-normalize.ts` (core) | 22.6 KB | 16.4 KB | 38.3 KB | 26.1 KB |
-| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 17.0 KB | 12.1 KB | 29.3 KB | 19.4 KB |
-| `@adraffy/ens-normalize.ts/full` (everything) | 24.9 KB | 17.6 KB | 44.1 KB* | 28.2 KB* |
+| `@adraffy/ens-normalize.ts` (core) | 22.7 KB | 16.4 KB | 38.3 KB | 26.1 KB |
+| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 17.1 KB | 12.2 KB | 29.3 KB | 19.4 KB |
+| `@adraffy/ens-normalize.ts/full` (everything) | 25.1 KB | 17.7 KB | 44.1 KB* | 28.2 KB* |
 
 Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.

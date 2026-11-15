@@ -41,7 +41,7 @@ const run = (f: () => unknown) => {
 	}
 };
 const plain = (v: unknown) =>
-	JSON.parse(JSON.stringify(v, (k, x) => (x instanceof Error ? { error: x.message } : k === 'emoji' && !x ? undefined : x)));
+	JSON.parse(JSON.stringify(v, (k, x) => (x instanceof Error ? { error: x.message } : (k === 'emoji' && !x) || k === 'restricted' ? undefined : x)));
 
 test(`api parity (${cases.length} names)`, () => {
 	for (const c of cases) {
@@ -73,6 +73,15 @@ test('examples', () => {
 	expect(lib.nfc([0x65, 0x301])).toEqual([0xe9]);
 	expect(lib.nfd([0xe9])).toEqual([0x65, 0x301]);
 	expect(lib.versions.unicode).toStartWith('17.0.0');
+});
+
+test('restricted', () => {
+	const [label] = lib.ensSplit('\u{1104D}\u{1104D}\u{1104D}'); // Brahmi
+	expect(label.type).toBe('Restricted[Brah]');
+	expect(label.restricted).toBe(true);
+	expect(lib.ensSplit('abc')[0].restricted).toBe(false);
+	expect(lib.ensSplit('💩')[0].restricted).toBe(false);
+	expect(lib.ensSplit('a_b')[0].restricted).toBeUndefined(); // invalid
 });
 
 test('label errors keep the original as cause', () => {

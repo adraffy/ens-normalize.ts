@@ -19,6 +19,8 @@ export interface Label extends LabelInfo {
 	emoji?: boolean;
 	/** script group: "ASCII", "Emoji", "Latin", "Restricted[Xxxx]", ... */
 	type?: string;
+	/** the script group is restricted (its type is "Restricted[Xxxx]") */
+	restricted?: boolean;
 }
 
 /** split a name into labels with details (does not throw) */

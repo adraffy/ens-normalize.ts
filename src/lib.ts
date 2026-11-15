@@ -18,9 +18,18 @@ const UNIQUE = 1; // confusable placeholder: valid in exactly one group and not 
 // ************************************************************
 // data
 
-type Group = {
-	/** display name, eg. "Latin" or "Restricted[Xxxx]" */
+/** what a valid label is: a script group, or ASCII/Emoji */
+type LabelType = {
+	/** display name: "ASCII", "Emoji", "Latin", "Restricted[Xxxx]", ... */
 	name: string;
+	/** a restricted (excluded or limited-use) script */
+	restricted?: boolean;
+};
+
+const ASCII: LabelType = { name: 'ASCII' };
+const EMOJI: LabelType = { name: 'Emoji' };
+
+type Group = LabelType & {
 	primary: Set<number>;
 	secondary: Set<number>;
 	/** enforce non-spacing mark rules (not CM-whitelisted) */
@@ -110,23 +119,28 @@ function readGroups(r: Reader): Group[] {
 		return set;
 	};
 	const unrestricted = r.uint(Ctx.UNRESTRICTED); // unrestricted groups come first
-	const groups: Group[] = [];
-	while (true) {
-		const letters: number[] = []; // a = 1
+	const readName = () => {
+		const letters: number[] = []; // a = 1, 0 terminated
 		for (let x; (x = r.uint(Ctx.GROUP_NAME + Math.min(letters.length, 4))); ) letters.push(x + 0x60);
-		if (!letters.length) return groups;
+		return letters;
+	};
+	const groups: Group[] = [];
+	for (let letters; (letters = readName()).length; ) {
 		letters[0] -= 32; // capitalize
 		const name = strFromCps(letters);
+		const restricted = groups.length >= unrestricted;
 		const primary = readChunked(Ctx.GROUP_PRIMARY);
 		const secondary = readChunked(Ctx.GROUP_SECONDARY);
 		groups.push({
-			name: groups.length < unrestricted ? name : `Restricted[${name}]`,
+			name: restricted ? `Restricted[${name}]` : name,
+			restricted,
 			primary,
 			secondary,
 			checkNSM: !!r.uint(Ctx.GROUP_NSM),
 			has: (cp) => primary.has(cp) || secondary.has(cp),
 		});
 	}
+	return groups;
 }
 
 // whole-script confusables: for each confused cp, the groups outside its extent
@@ -320,6 +334,7 @@ export type LabelInfo = {
 	output?: number[];
 	emoji?: boolean;
 	type?: string;
+	restricted?: boolean;
 };
 
 export const flat = (tokens: OutputToken[]) => tokens.flatMap((t) => t.cps);
@@ -332,7 +347,9 @@ export function processLabel(input: number[], styler: EmojiStyler, info: LabelIn
 	if (!tokens.length) throw new Error('empty label'); // the label could have been only ignored characters
 	const norm = (info.output = flat(tokens));
 	checkLeadingUnderscore(norm);
-	info.type = checkValid(tokens, norm, (info.emoji = tokens.length > 1 || !!tokens[0].emoji));
+	const { name, restricted } = checkValid(tokens, norm, (info.emoji = tokens.length > 1 || !!tokens[0].emoji));
+	info.type = name;
+	info.restricted = !!restricted;
 	return info as Required<LabelInfo>;
 }
 
@@ -343,21 +360,21 @@ function checkLeadingUnderscore(cps: number[]) {
 }
 
 // returns the label type
-function checkValid(tokens: OutputToken[], norm: number[], emoji: boolean): string {
+function checkValid(tokens: OutputToken[], norm: number[], emoji: boolean): LabelType {
 	if (!emoji && norm.every((cp) => cp < 0x80)) {
 		// fast path: ascii cant have fenced, cm, or wholes
 		checkLabelExtension(norm);
-		return 'ASCII';
+		return ASCII;
 	}
 	const chars = tokens.flatMap((t) => (t.emoji ? [] : t.cps)); // all of the text, concatenated
-	if (!chars.length) return 'Emoji';
+	if (!chars.length) return EMOJI;
 	checkCombiningMarks(tokens);
 	checkFenced(norm);
 	const unique = [...new Set(chars)];
 	const group = determineGroup(unique);
 	checkGroup(group, chars); // need text in order
 	checkWhole(group, unique); // only need unique text
-	return group.name;
+	return group;
 }
 
 // assumption: ascii

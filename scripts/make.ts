@@ -98,9 +98,8 @@ function findSharedChunks(groups: number[][], minOverlap = 0.9, minSize = 256) {
 		for (const cp of cps) (union.has(cp) ? shared : union).add(cp);
 	}
 	const chunks: number[][] = [];
-	while (true) {
-		groups = groups.map((cps) => cps.filter((cp) => shared.has(cp))).filter((cps) => cps.length);
-		if (groups.length <= 1) break;
+	const onlyShared = (v: number[][]) => v.map((cps) => cps.filter((cp) => shared.has(cp))).filter((cps) => cps.length);
+	for (groups = onlyShared(groups); groups.length > 1; groups = onlyShared(groups)) {
 		groups.sort((a, b) => b.length - a.length);
 		const share = [0];
 		let set0 = new Set(groups[0]);
