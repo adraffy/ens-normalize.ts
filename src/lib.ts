@@ -298,14 +298,12 @@ function transform(name: string, styler: EmojiStyler, fix?: (cps: number[], type
 		.map((label) => {
 			const input = explodeCp(label);
 			try {
-				const tokens = outputTokenize(input, styler);
-				const norm = flat(tokens);
-				const type = checkLabel(tokens, norm);
-				fix?.(norm, type);
-				return strFromCps(norm);
+				const { output, type } = processLabel(input, styler);
+				fix?.(output, type);
+				return strFromCps(output);
 			} catch (err) {
-				const msg = (err as Error).message;
-				throw new Error(labels.length == 1 ? msg : `Invalid label ${bidiQQ(safeStrFromCps(input, 63))}: ${msg}`);
+				if (labels.length == 1) throw err;
+				throw new Error(`Invalid label ${bidiQQ(safeStrFromCps(input, 63))}: ${(err as Error).message}`, { cause: err });
 			}
 		})
 		.join(STOP_CH);
@@ -316,29 +314,36 @@ function transform(name: string, styler: EmojiStyler, fix?: (cps: number[], type
 
 export type EmojiStyler = (emoji: number[]) => number[];
 
+/** the result of each step of processLabel(), see Label in extras.ts */
+export type LabelInfo = {
+	tokens?: number[][];
+	output?: number[];
+	emoji?: boolean;
+	type?: string;
+};
+
 export const flat = (tokens: OutputToken[]) => tokens.flatMap((t) => t.cps);
-export const isEmojiLabel = (tokens: OutputToken[]) => tokens.length > 1 || !!tokens[0].emoji;
 
-// throws if invalid, returns the label type
-function checkLabel(tokens: OutputToken[], norm: number[]): string {
-	checkNotEmpty(tokens);
+// tokenize and validate one label, throws if invalid
+// each step records its result on `info` before the next can throw (ensSplit relies on this)
+export function processLabel(input: number[], styler: EmojiStyler, info: LabelInfo = {}): Required<LabelInfo> {
+	const tokens = outputTokenize(input, styler);
+	info.tokens = tokens.map((t) => t.cps);
+	if (!tokens.length) throw new Error('empty label'); // the label could have been only ignored characters
+	const norm = (info.output = flat(tokens));
 	checkLeadingUnderscore(norm);
-	return checkValid(tokens, norm, isEmojiLabel(tokens));
+	info.type = checkValid(tokens, norm, (info.emoji = tokens.length > 1 || !!tokens[0].emoji));
+	return info as Required<LabelInfo>;
 }
 
-// the label could have been only ignored characters
-export function checkNotEmpty(tokens: OutputToken[]) {
-	if (!tokens.length) throw new Error('empty label');
-}
-
-export function checkLeadingUnderscore(cps: number[]) {
+function checkLeadingUnderscore(cps: number[]) {
 	for (let i = cps.lastIndexOf(UNDERSCORE); i > 0; ) {
 		if (cps[--i] !== UNDERSCORE) throw new Error('underscore allowed only at start');
 	}
 }
 
 // returns the label type
-export function checkValid(tokens: OutputToken[], norm: number[], emoji: boolean): string {
+function checkValid(tokens: OutputToken[], norm: number[], emoji: boolean): string {
 	if (!emoji && norm.every((cp) => cp < 0x80)) {
 		// fast path: ascii cant have fenced, cm, or wholes
 		checkLabelExtension(norm);

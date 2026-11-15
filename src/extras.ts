@@ -1,22 +1,10 @@
 // APIs that only ./full exports: label details, emoji list, CM lookup
 
 import { compareArrays, explodeCp } from './utils.ts';
-import {
-	init,
-	outputTokenize,
-	filterFE0F,
-	flat,
-	isEmojiLabel,
-	checkNotEmpty,
-	checkLeadingUnderscore,
-	checkValid,
-	CM,
-	NSM,
-	EMOJI_LIST,
-} from './lib.ts';
+import { init, processLabel, filterFE0F, CM, NSM, EMOJI_LIST, type LabelInfo } from './lib.ts';
 
 /** A label produced by {@link ensSplit}. */
-export interface Label {
+export interface Label extends LabelInfo {
 	/** input codepoints */
 	input: number[];
 	/** codepoint offset of this label in the name */
@@ -43,13 +31,7 @@ export function ensSplit(name: string, preserveEmoji?: boolean): Label[] {
 		const info: Label = { input, offset };
 		offset += input.length + 1; // + stop
 		try {
-			// same steps as transform() in lib.ts, recording each result
-			const tokens = outputTokenize(input, preserveEmoji ? (x) => x.slice() : filterFE0F);
-			info.tokens = tokens.map((t) => t.cps);
-			checkNotEmpty(tokens);
-			const norm = (info.output = flat(tokens));
-			checkLeadingUnderscore(norm);
-			info.type = checkValid(tokens, norm, (info.emoji = isEmojiLabel(tokens)));
+			processLabel(input, preserveEmoji ? (x) => x.slice() : filterFE0F, info);
 		} catch (err) {
 			info.error = err as Error;
 		}

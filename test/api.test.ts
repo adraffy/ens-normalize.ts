@@ -46,3 +46,24 @@ test('examples', () => {
 	expect(lib.nfd([0xe9])).toEqual([0x65, 0x301]);
 	expect(lib.versions.unicode).toStartWith('17.0.0');
 });
+
+test('label errors keep the original as cause', () => {
+	const single = (() => {
+		try {
+			lib.ensNormalize('a!b');
+		} catch (err) {
+			return err as Error;
+		}
+	})()!;
+	expect(single.message).toStartWith('disallowed character');
+	expect(single.cause).toBeUndefined();
+	const multi = (() => {
+		try {
+			lib.ensNormalize('a!b.eth');
+		} catch (err) {
+			return err as Error;
+		}
+	})()!;
+	expect(multi.message).toStartWith('Invalid label');
+	expect((multi.cause as Error).message).toBe(single.message);
+});
