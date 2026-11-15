@@ -46,16 +46,23 @@ ensNormalize('a!b.eth'); // throws: Invalid label "a!b": disallowed character: "
 ensNormalize('a..eth'); // throws: Invalid label "": empty label
 ```
 
-The possible reasons are:
-- `empty label`
-- `disallowed character: …`
-- `underscore allowed only at start`
-- `invalid label extension: "xx--"`
-- `illegal placement: …` (leading/trailing/adjacent fenced characters, or a misplaced combining mark)
-- `illegal mixture: Latin + Greek "α" {3B1}` (characters from scripts that can't be mixed)
-- `whole-script confusable: …`
-- `duplicate non-spacing marks: …`
-- `excessive non-spacing marks: …`
+The possible reasons, with the exact format and an example of each. `"x" {HEX}` is a quoted character followed by its codepoint in hex. The quote is left out for invisible characters.
+
+| reason | meaning | example input → message |
+|---|---|---|
+| `empty label` | the label has no characters left once ignored ones (like U+FE0F) are removed | `"a..eth"` → `Invalid label "": empty label` |
+| `disallowed character: "x" {HEX}` | a character that's never allowed in a name | `"a b"` → `disallowed character: " " {20}`<br>`"a\u200Db"` → `disallowed character: {200D}` |
+| `underscore allowed only at start` | underscores can only be a prefix (`"__a"` is fine) | `"a_b"` |
+| `invalid label extension: "xx--"` | ASCII labels can't have `--` as the 3rd and 4th characters (reserved, like `xn--`) | `"xn--ls8h"` → `invalid label extension: "xn--"` |
+| `illegal placement: leading NAME`<br>`illegal placement: trailing NAME`<br>`illegal placement: NAME + NAME` | a fenced character (apostrophe `’`, fraction slash `⁄`, middle dot `・`) can't start or end a label, or touch another one. `'` maps to `’`. | `"'a"` → `illegal placement: leading apostrophe`<br>`"a・"` → `illegal placement: trailing middle dot`<br>`"1⁄⁄2"` → `illegal placement: fraction slash + fraction slash` |
+| `illegal placement: leading combining mark` | the label starts with a combining mark | `"\u0303a"` |
+| `illegal placement: emoji + combining mark: "EMOJI + ◌x"` | a combining mark directly after an emoji | `"💩\u0303"` → `illegal placement: emoji + combining mark: "💩 + ◌̃"` |
+| `illegal mixture: GROUP + "x" {HEX}`<br>`illegal mixture: GROUP + OTHER "x" {HEX}` | characters from scripts that can't be mixed. GROUP is the label's script; OTHER is the script the conflicting character belongs to, when it has one. | `"aα"` → `illegal mixture: Latin + Greek "α" {3B1}` |
+| `whole-script confusable: GROUP/OTHER` | every character could be mistaken for one in another script, so the whole label looks like a name in OTHER | `"аррӏе"` (Cyrillic) → `whole-script confusable: Cyrillic/Latin` |
+| `duplicate non-spacing marks: "◌x" {HEX}` | the same non-spacing mark twice in a row | `"\u0622\u064D\u064D"` → `duplicate non-spacing marks: "◌ٍ" {64D}` |
+| `excessive non-spacing marks: "TEXT" (N/4)` | more than 4 non-spacing marks in a row | `"\u0625\u0610\u0611\u0612\u0613"` → `excessive non-spacing marks: "إؐؑؒؓ" (5/4)` (marks are counted after NFD) |
+
+GROUP and OTHER are script group names like `Latin`, `Greek`, or `Restricted[Cher]` (restricted scripts use their ISO 15924 code).
 
 Quoted text in messages is followed by U+200E so right-to-left text can't flip the rest of the message.
 
