@@ -32,7 +32,7 @@ test.skipIf(!has)('dist/index.cjs', () => {
 test.skipIf(!has)('dist/full.js', async () => {
 	const lib = await import(dist('full.js'));
 	expect(failures(lib.ensNormalize)).toBe(0);
-	expect(lib.ensTokenize('a\u0300').map((t: { type: string }) => t.type)).toEqual(['nfc']);
+	expect(lib.ensTokenize('a\u0300').tokens.map((t: { type: string }) => t.type)).toEqual(['nfc']);
 });
 
 // native NF depends on the engine's Unicode version, so just report

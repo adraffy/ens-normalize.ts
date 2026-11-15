@@ -95,7 +95,7 @@ Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, 
 | `ens_normalize_fragment` | `ensNormalizeFragment(frag, decompose?)` | core |
 | `ens_split` | `ensSplit(name, preserveEmoji?)` | full |
 | `ens_emoji` | `ensEmoji()` | full |
-| `ens_tokenize` | `ensTokenize(name, {nf?})` | full |
+| `ens_tokenize` | `ensTokenize(name, {nfc?})` (new shape, see below) | full |
 | `is_combining_mark` | `isCombiningMark(cp, onlyNSM?)` | full |
 | `should_escape` | `shouldEscape(cp)` | full |
 | `safe_str_from_cps` | `safeStrFromCps(cps, max?, quoter?)` | full |
@@ -106,7 +106,42 @@ Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, 
 
 `xnf` has the same exports as core. `full` re-exports everything in core.
 
+### ensTokenize
+
+```ts
+function ensTokenize(name: string, options?: { nfc?: boolean }): Tokenized;
+
+type Tokenized = {
+	input: number[]; // codepoints of the name
+	tokens: Token[];
+};
+
+// every token covers input.slice(start, end) and says what it becomes
+type Token = { start: number; end: number; output: number[] } & (
+	| { type: 'valid' | 'mapped' | 'ignored' | 'disallowed' | 'stop' }
+	| { type: 'emoji'; beautified: number[] } // fully-qualified form; output drops FE0F
+	| { type: 'nfc'; parts: Token[] } // a text run that changed under NFC, and its tokens before NFC
+);
+```
+
+It never throws and doesn't validate. The tokens cover `input` in order with no gaps. Concatenating every `output` gives the same result as `ensNormalizeFragment` (except that disallowed characters output nothing instead of throwing). `valid` tokens are runs; every other text token is one codepoint. Pass `{ nfc: false }` to skip creating `nfc` tokens.
+
+```ts
+ensTokenize('A\u0301b💩.');
+// input: [0x41, 0x301, 0x62, 0x1F4A9, 0x2E]
+// tokens:
+//   { type: 'nfc', start: 0, end: 2, output: [0xE1], parts: [
+//       { type: 'mapped', start: 0, end: 1, output: [0x61] },
+//       { type: 'valid', start: 1, end: 2, output: [0x301] } ] }
+//   { type: 'valid', start: 2, end: 3, output: [0x62] }
+//   { type: 'emoji', start: 3, end: 4, output: [0x1F4A9], beautified: [0x1F4A9, 0xFE0F] }
+//   { type: 'stop', start: 4, end: 5, output: [0x2E] }
+```
+
+### Compatibility
+
 Error messages and outputs match 1.11.1 exactly. Differences:
+- `ensTokenize` returns the new shape above. The tests convert it back to 1.11.1's format and check it against that version's output.
 - `Label.emoji` is `false` instead of `undefined` for text-only labels.
 - Emoji tokens are plain arrays (no `Emoji` subclass or `is_emoji` getter), which matters on engines like Hermes where `.slice()`/`.filter()` don't preserve subclasses.
 

@@ -1,6 +1,34 @@
 // parity with @adraffy/ens-normalize@1.11.1 (fixture generated from that library)
 import { test, expect } from 'bun:test';
 import * as lib from '../src/full.ts';
+import type { Tokenized } from '../src/full.ts';
+
+// converts the new token shape to the one 1.11.1's ens_tokenize returned
+function legacy({ input, tokens }: Tokenized): unknown[] {
+	return tokens.map((t) => {
+		const cp = input[t.start];
+		switch (t.type) {
+			case 'stop':
+			case 'ignored':
+			case 'disallowed':
+				return { type: t.type, cp };
+			case 'valid':
+				return { type: t.type, cps: t.output };
+			case 'mapped':
+				return { type: t.type, cp, cps: t.output };
+			case 'emoji':
+				return { type: t.type, emoji: t.beautified, input: input.slice(t.start, t.end), cps: t.output };
+			case 'nfc':
+				return {
+					type: t.type,
+					input: t.parts.flatMap((p) => (p.type == 'valid' || p.type == 'mapped' ? p.output : [])),
+					cps: t.output,
+					tokens0: legacy({ input, tokens: t.parts }),
+					tokens: legacy(lib.ensTokenize(lib.strFromCps(t.output), { nfc: false })),
+				};
+		}
+	});
+}
 
 type Case = { name: string; [k: string]: unknown };
 const cases: Case[] = await Bun.file(new URL('./data/api.json', import.meta.url)).json();
@@ -26,7 +54,7 @@ test(`api parity (${cases.length} names)`, () => {
 				fragment: run(() => lib.ensNormalizeFragment(name)),
 				fragmentNFD: run(() => lib.ensNormalizeFragment(name, true)),
 				split: run(() => lib.ensSplit(name)),
-				tokenize: run(() => lib.ensTokenize(name)),
+				tokenize: run(() => legacy(lib.ensTokenize(name))),
 			}),
 		).toEqual(c);
 	}
