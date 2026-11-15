@@ -6,4 +6,4 @@ export type { Label } from './extras.ts';
 export { ensTokenize } from './tokenize.ts';
 export type { Tokenized, TokenizeOptions, Token, TextToken, EmojiToken, NFCToken } from './tokenize.ts';
 export { hexCp, quoteCp, explodeCp, strFromCps } from './utils.ts';
-export { versions } from './generated/version.ts';
+export { ensBuildInfo } from './generated/build-info.ts';

@@ -72,7 +72,7 @@ test('examples', () => {
 	expect(lib.safeStrFromCps([0x300, 0x61, 0x200d])).toBe('◌̀a{200D}');
 	expect(lib.nfc([0x65, 0x301])).toEqual([0xe9]);
 	expect(lib.nfd([0xe9])).toEqual([0x65, 0x301]);
-	expect(lib.versions.unicode).toStartWith('17.0.0');
+	expect(lib.ensBuildInfo.unicode).toStartWith('17.0.0');
 });
 
 test('restricted', () => {

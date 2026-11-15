@@ -102,7 +102,7 @@ Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, 
 | `nfc` / `nfd` | `nfc(cps)` / `nfd(cps)` | full |
 | `explode_cp` / `str_from_cps` | `explodeCp(s)` / `strFromCps(cps)` | full |
 | `hex_cp` / `quote_cp` | `hexCp(cp)` / `quoteCp(cp)` | full |
-| `versions` | `versions` (`{derived, unicode, cldr, specHash, nfHash}`) | full |
+| `versions` | `ensBuildInfo` (`{derived, unicode, cldr, specHash, nfHash}`) | full |
 
 `xnf` has the same exports as core. `full` re-exports everything in core.
 

@@ -324,10 +324,11 @@ await Bun.write(
 	[header('data/spec.json'), `export default '${NFC_CHECK}';`, ''].join('\n'),
 );
 await Bun.write(
-	new URL('version.ts', OUT),
+	new URL('build-info.ts', OUT),
 	[
 		header('data/spec.json + data/nf.json'),
-		`export const versions = ${JSON.stringify(
+		`/** what this build was made from: spec versions and sha256 of the data files */`,
+		`export const ensBuildInfo = ${JSON.stringify(
 			{
 				derived: spec.created,
 				unicode: spec.unicode,
