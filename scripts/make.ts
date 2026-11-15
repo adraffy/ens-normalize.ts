@@ -90,6 +90,16 @@ const fullDecomp = (x: number): number[] => {
 	const v = DECOMP.get(x);
 	return v ? v.flatMap(fullDecomp) : [x];
 };
+// full canonical decomposition including algorithmic hangul
+const nfdParts = (x: number): number[] => {
+	const s = x - 0xac00;
+	if (s >= 0 && s < 11172) {
+		const v = [0x1100 + Math.floor(s / 588), 0x1161 + Math.floor((s % 588) / 28)];
+		if (s % 28) v.push(0x11a7 + (s % 28));
+		return v;
+	}
+	return fullDecomp(x);
+};
 
 function findSharedChunks(groups: number[][], minOverlap = 0.9, minSize = 256) {
 	const union = new Set<number>();
@@ -204,7 +214,7 @@ function encodeENS() {
 				}
 			});
 			enc.set((i ? Ctx.GROUP_SECONDARY : Ctx.GROUP_PRIMARY), parts);
-			enc.set((i ? Ctx.GROUP_SECONDARY : Ctx.GROUP_PRIMARY) + 3, set);
+			enc.set((i ? Ctx.GROUP_SECONDARY : Ctx.GROUP_PRIMARY) + 4, set);
 		}
 		enc.uint(Ctx.GROUP_NSM, Array.isArray(g.cm) ? 0 : 1); // 1 = check NSM
 	}
@@ -225,6 +235,12 @@ function encodeENS() {
 		lastIndex.set(f.w, i);
 	});
 	sec.mark('wholes');
+
+	// valid is closed under nfd: store the parts that aren't already valid
+	const union = new Set(groups.flatMap((g) => [...g.primary, ...g.secondary]));
+	const parts = [...new Set([...union].flatMap(nfdParts))].filter((cp) => !union.has(cp));
+	enc.set(Ctx.VALID_PARTS, parts);
+	sec.mark('valid parts');
 
 	// emoji
 	if (emoji.some((v) => v.length < 2)) throw new Error('expected no solo emoji');

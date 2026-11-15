@@ -80,11 +80,13 @@ ensNormalizeFragment('é', true); // "e\u0301"
 | entry | min | gzip | 1.11.1 min | 1.11.1 gzip |
 |---|---:|---:|---:|---:|
 | `@adraffy/ens-normalize.ts` (core) | 22.7 KB | 16.4 KB | 38.3 KB | 26.1 KB |
-| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 17.1 KB | 12.2 KB | 29.3 KB | 19.4 KB |
+| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 17.1 KB | 12.1 KB | 29.3 KB | 19.4 KB |
 | `@adraffy/ens-normalize.ts/full` (everything) | 25.1 KB | 17.7 KB | 44.1 KB* | 28.2 KB* |
 
 Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
+
+**Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 48 ms, vs 54 ms for 1.11.1.
 
 ## Full API
 
@@ -182,9 +184,9 @@ The spec and test JSON aren't committed. They're fetched from ens-normalize.js, 
 
 | blob | here (base-93) | 1.11.1 (base64) |
 |---|---:|---:|
-| ENS | 10,578 | 20,100 (includes nfc_check) |
+| ENS | 10,494 | 20,100 (includes nfc_check) |
 | nfc_check | 328 | |
-| NF | 4,728 | 7,568 |
+| NF | 4,730 | 7,568 |
 
 The make script verifies every symbol by decoding it with `src/decoder.ts`.
 If you change the model, change `scripts/encoder.ts` and `src/decoder.ts` together.

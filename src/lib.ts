@@ -84,8 +84,8 @@ export function init() {
 		if (!multi.has(cp) && !CONFUSABLES.has(cp)) CONFUSABLES.set(cp, UNIQUE);
 	}
 
-	// valid is closed under nfd
-	addMany(VALID, nfd(VALID));
+	// valid is closed under nfd: add the decomposed parts that aren't valid on their own
+	addMany(VALID, r.set(Ctx.VALID_PARTS));
 
 	EMOJI_LIST = readEmoji(r); // no two emoji differ only by FE0F, so order doesn't matter
 	EMOJI_ROOT = new Map();
@@ -112,10 +112,16 @@ function readGroups(r: Reader): Group[] {
 	// large shared sets (eg. Han) are stored once as chunks
 	const chunks: number[][] = [];
 	for (let n = r.uint(Ctx.CHUNK_COUNT); n--; ) chunks.push(r.set(Ctx.CHUNK));
+	const shared = new Map<string, Set<number>>(); // identical sets (eg. Korean/Japanese secondary) share one Set
 	const readChunked = (c: number) => {
-		const set = new Set<number>();
-		for (const i of r.set(c)) addMany(set, chunks[i]);
-		addMany(set, r.set(c + 3));
+		const parts = r.set(c);
+		const extra = r.set(c + 4);
+		const key = `${parts}|${extra}`;
+		let set = shared.get(key);
+		if (!set) {
+			shared.set(key, (set = new Set(extra)));
+			for (const i of parts) addMany(set, chunks[i]);
+		}
 		return set;
 	};
 	const unrestricted = r.uint(Ctx.UNRESTRICTED); // unrestricted groups come first

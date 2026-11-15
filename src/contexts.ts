@@ -1,32 +1,35 @@
 // Context ids for the encoded payloads, shared by scripts/make.ts and the readers.
 // Each id selects an independent probability model (see src/decoder.ts).
-// A set uses 3 consecutive ids. A mapped table uses 17 (see readMapped).
+// A set uses 4 consecutive ids. A mapped table uses 17 (see readMapped).
 
-// ens
 export const enum Ctx {
+	// ens
 	MAPPED = 0,
 	IGNORED = 20,
-	CM = 23,
-	NSM = 26, // indices into CM
-	ESCAPE = 29,
-	NFC_CHECK = 32,
-	CHUNK_COUNT = 35,
-	CHUNK = 36,
-	UNRESTRICTED = 40,
-	GROUP_PRIMARY = 42, // chunk indices, then extra set at +3
-	GROUP_SECONDARY = 48, // same
-	GROUP_NSM = 54,
-	WHOLE_VALID = 60,
+	CM = 24,
+	NSM = 28, // indices into CM
+	ESCAPE = 32,
+	CHUNK_COUNT = 36,
+	CHUNK = 37,
+	UNRESTRICTED = 41,
+	GROUP_PRIMARY = 42, // chunk indices, then extra set at +4
+	GROUP_SECONDARY = 50, // same
+	GROUP_NSM = 58,
+	WHOLE_VALID = 59,
 	WHOLE_CONFUSED = 63,
-	WHOLE_LINK = 66,
-	EMOJI_CPS = 70,
-	EMOJI_STATE = 73,
-	EMOJI_BRANCH = 74,
+	WHOLE_LINK = 67,
+	VALID_PARTS = 68, // decomposed parts of valid cps that aren't valid themselves
+	EMOJI_CPS = 72,
+	EMOJI_STATE = 76,
+	EMOJI_BRANCH = 77,
 	GROUP_NAME = 100, // +0..4 by letter position
+
+	// nfc-check (separate payload)
+	NFC_CHECK = 0,
 
 	// nf
 	RANK_COUNT = 0,
 	RANK = 1,
-	EXCLUSIONS = 4,
+	EXCLUSIONS = 5,
 	DECOMP = 10,
 }

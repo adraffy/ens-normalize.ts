@@ -11,7 +11,7 @@ export type Reader = {
 	uint(ctx: number): number;
 	/** signed int in context `ctx` */
 	sint(ctx: number): number;
-	/** sorted set in contexts `ctx`..`ctx+2` */
+	/** sorted set in contexts `ctx`..`ctx+3` */
 	set(ctx: number): number[];
 };
 
@@ -62,11 +62,11 @@ export function reader(str: string): Reader {
 		const x = uint(ctx);
 		return x & 1 ? -(x + 1) / 2 : x / 2;
 	};
-	// runs: count, then (gap, length-1) pairs
+	// runs: count, then (gap, length-1) pairs; the first gap has its own context
 	const set = (ctx: number) => {
 		const v: number[] = [];
 		for (let runs = uint(ctx), x = 0; runs--; ) {
-			x += uint(ctx + 1);
+			x += uint(ctx + (x ? 1 : 3));
 			for (let len = uint(ctx + 2) + 1; len--; ) v.push(x++);
 			x++;
 		}

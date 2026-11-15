@@ -94,7 +94,7 @@ export class Encoder {
 	}
 
 	// sorted unique set as runs: count, then (gap, length-1) pairs
-	// uses contexts c, c+1, c+2
+	// contexts: c count, c+1 gap, c+2 length, c+3 first gap (an absolute position)
 	set(c: number, values: Iterable<number>) {
 		const v = [...new Set(values)].sort((a, b) => a - b);
 		const runs: [number, number][] = [];
@@ -109,7 +109,7 @@ export class Encoder {
 		this.uint(c, runs.length);
 		let prev = 0;
 		for (const [x, n] of runs) {
-			this.uint(c + 1, x - prev);
+			this.uint(c + (prev ? 1 : 3), x - prev);
 			this.uint(c + 2, n - 1);
 			prev = x + n + 1; // runs are separated by at least 1
 		}
