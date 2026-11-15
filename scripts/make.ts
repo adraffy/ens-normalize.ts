@@ -322,14 +322,14 @@ const header = (src: string) =>
 const OUT = new URL('src/generated/', ROOT);
 await Bun.write(
 	new URL('nf.ts', OUT),
-	[header('data/nf.json'), `// sha256: ${sha256(nfBytes)}`, `export default '${NF}';`, ''].join('\n'),
+	[header('data/nf.json'), `// sha256: ${sha256(nfBytes)}`, `const data: string = '${NF}'; // typed so the .d.ts doesn't carry the blob`, 'export default data;', ''].join('\n'),
 );
 await Bun.write(
 	new URL('ens.ts', OUT),
 	[
 		header('data/spec.json'),
 		`// sha256: ${sha256(specBytes)}`,
-		`export default '${ENS}';`,
+		`const data: string = '${ENS}'; // typed so the .d.ts doesn't carry the blob`, 'export default data;',
 		`export const FENCED: Map<number, string> = new Map(${JSON.stringify(spec.fenced)});`,
 		`export const NSM_MAX = ${spec.nsm_max};`,
 		'',
@@ -337,7 +337,7 @@ await Bun.write(
 );
 await Bun.write(
 	new URL('nfc-check.ts', OUT),
-	[header('data/spec.json'), `export default '${NFC_CHECK}';`, ''].join('\n'),
+	[header('data/spec.json'), `const data: string = '${NFC_CHECK}'; // typed so the .d.ts doesn't carry the blob`, 'export default data;', ''].join('\n'),
 );
 await Bun.write(
 	new URL('build-info.ts', OUT),
