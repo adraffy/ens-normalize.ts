@@ -56,7 +56,8 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 - **Don't edit `src/generated/`** by hand.
 - **Keep parity.** If a change alters any output or error message, it's a bug unless it was asked for. Then update README "Compatibility", and update the conversion or skip list in `test/api.test.ts`. Never regenerate `test/fixtures/api-1.11.1.json` from this library; it has to come from ens-normalize.js.
 - **Don't use `Array` subclasses or rely on `Symbol.species`.** Hermes (React Native) doesn't support it; see ens-normalize.js#35. Emoji are tracked as `{ cps, emoji: true }` tokens.
-- **Keep core lean.** Anything that only `full` needs belongs in `extras.ts`/`tokenize.ts`, or in its own data blob. Bun doesn't inline constants across modules unless they're a `const enum`, and it doesn't mangle property names, so short property names matter.
+- **Keep core lean.** Anything that only `full` needs belongs in `extras.ts`/`tokenize.ts`, or in its own data blob. Bun doesn't inline constants across modules unless they're a `const enum`.
+- **Property names are renamed by terser** (`scripts/build.ts`). Core and xnf rename every property except the ones in `CORE_PROPS.reserved`, so a new option or anything else that crosses the public boundary of core must be added there. Full only renames the internal names in `FULL_PROPS`; add new internal properties there, but never a name that is also a public field.
 - **Language level:** emitted code may use up to ES2021 (`??=`, `?.`). The browser test pages avoid anything newer, so older browsers can run them.
 - **Size experiments:** try ideas in the scratch space first, measure the blob size reported by `make.ts` and the bundle size reported by `build.ts`, and only keep what pays for its code.
 

@@ -28,8 +28,8 @@ let RECOMP: Map<number, Map<number, number>>; // a => b => composed
 function init() {
 	const r = reader(NF);
 	RANK = new Map();
-	for (let i = 1, n = r.uint(Ctx.RANK_COUNT); i <= n; i++) for (const cp of r.set(Ctx.RANK)) RANK.set(cp, i << 24);
-	const exclusions = new Set(r.set(Ctx.EXCLUSIONS));
+	for (let i = 1, n = r.uint(Ctx.RANK_COUNT); i <= n; i++) for (const cp of r.runs(Ctx.RANK)) RANK.set(cp, i << 24);
+	const exclusions = new Set(r.runs(Ctx.EXCLUSIONS));
 	DECOMP = new Map(readMapped(r, Ctx.DECOMP));
 	RECOMP = new Map();
 	for (const [cp, [a, b]] of DECOMP) {

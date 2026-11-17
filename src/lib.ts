@@ -63,11 +63,11 @@ export function init() {
 
 	// mapped entries flagged as canonical decompositions are derived
 	MAPPED = new Map(readMapped(r, Ctx.MAPPED, (cp) => nfd([cp])));
-	IGNORED = new Set(r.set(Ctx.IGNORED));
-	const cm = r.set(Ctx.CM);
+	IGNORED = new Set(r.runs(Ctx.IGNORED));
+	const cm = r.runs(Ctx.CM);
 	CM = new Set(cm);
-	NSM = new Set(r.set(Ctx.NSM).map((i) => cm[i]));
-	ESCAPE = new Set(r.set(Ctx.ESCAPE)); // characters that should not be printed
+	NSM = new Set(r.runs(Ctx.NSM).map((i) => cm[i]));
+	ESCAPE = new Set(r.runs(Ctx.ESCAPE)); // characters that should not be printed
 	GROUPS = readGroups(r);
 
 	// valid = union of groups
@@ -85,7 +85,7 @@ export function init() {
 	}
 
 	// valid is closed under nfd: add the decomposed parts that aren't valid on their own
-	addMany(VALID, r.set(Ctx.VALID_PARTS));
+	addMany(VALID, r.runs(Ctx.VALID_PARTS));
 
 	EMOJI_LIST = readEmoji(r); // no two emoji differ only by FE0F, so order doesn't matter
 	EMOJI_ROOT = new Map();
@@ -111,11 +111,11 @@ export function init() {
 function readGroups(r: Reader): Group[] {
 	// large shared sets (eg. Han) are stored once as chunks
 	const chunks: number[][] = [];
-	for (let n = r.uint(Ctx.CHUNK_COUNT); n--; ) chunks.push(r.set(Ctx.CHUNK));
+	for (let n = r.uint(Ctx.CHUNK_COUNT); n--; ) chunks.push(r.runs(Ctx.CHUNK));
 	const shared = new Map<string, Set<number>>(); // identical sets (eg. Korean/Japanese secondary) share one Set
 	const readChunked = (c: number) => {
-		const parts = r.set(c);
-		const extra = r.set(c + 4);
+		const parts = r.runs(c);
+		const extra = r.runs(c + 4);
 		const key = `${parts}|${extra}`;
 		let set = shared.get(key);
 		if (!set) {
@@ -152,11 +152,11 @@ function readGroups(r: Reader): Group[] {
 // whole-script confusables: for each confused cp, the groups outside its extent
 function readConfusables(r: Reader) {
 	const ret = new Map<number, Set<Group>>();
-	const valid = new Set(r.set(Ctx.WHOLE_VALID));
+	const valid = new Set(r.runs(Ctx.WHOLE_VALID));
 	// each sorted member links to the previous member of its whole (0 = new whole)
 	const wholes: number[][] = [];
 	const owner: number[][] = [];
-	[...valid, ...r.set(Ctx.WHOLE_CONFUSED)]
+	[...valid, ...r.runs(Ctx.WHOLE_CONFUSED)]
 		.sort((a, b) => a - b)
 		.forEach((cp, i) => {
 			const link = r.uint(Ctx.WHOLE_LINK);
@@ -187,11 +187,11 @@ function readConfusables(r: Reader) {
 function readEmoji(r: Reader): number[][] {
 	type Node = { state: number; branches: Node[]; cps: number[] };
 	const ret: number[][] = [];
-	const sorted = r.set(Ctx.EMOJI_CPS);
+	const sorted = r.runs(Ctx.EMOJI_CPS);
 	const read = (cps: number[]): Node => {
 		const state = r.uint(Ctx.EMOJI_STATE); // 1 = valid, 2 = save modifier, 4 = check modifier
 		const branches: Node[] = [];
-		for (let v; (v = r.set(Ctx.EMOJI_BRANCH)).length; ) branches.push(read(v.map((i) => sorted[i])));
+		for (let v; (v = r.runs(Ctx.EMOJI_BRANCH)).length; ) branches.push(read(v.map((i) => sorted[i])));
 		return { state, branches, cps };
 	};
 	const expand = ({ state, branches }: Node, path: number[], saved?: number) => {

@@ -70,7 +70,7 @@ export type TokenizeOptions = {
  */
 export function ensTokenize(name: string, { nfc: collapse = true }: TokenizeOptions = {}): Tokenized {
 	init();
-	NFC_CHECK ??= new Set(reader(NFC_CHECK_DATA).set(Ctx.NFC_CHECK));
+	NFC_CHECK ??= new Set(reader(NFC_CHECK_DATA).runs(Ctx.NFC_CHECK));
 	const input = explodeCp(name);
 	let tokens = tokenize(input);
 	if (collapse) tokens = collapseNFC(tokens);

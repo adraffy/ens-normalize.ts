@@ -15,6 +15,14 @@ const nativeNF: BunPlugin = {
 	},
 };
 
+// Property renaming (Bun's minifier doesn't do it).
+// core takes { beautify } and returns strings, so every property can be renamed except what crosses the boundary:
+// the option, Error's `cause`, and the export names the CJS wrapper defines.
+const CORE_PROPS = { reserved: ['beautify', 'cause', 'ensNormalize', 'ensNormalizeFragment', 'exports', '__esModule'] };
+// full returns objects (labels, tokens), so only rename properties that never leave the library.
+// A name listed here must not also be a public field.
+const FULL_PROPS = { regex: /^(uint|sint|runs|primary|secondary|checkNSM|branches|state)$/ };
+
 await rm(DIST, { recursive: true, force: true });
 
 const sizes: [string, number, number][] = [];
@@ -41,10 +49,11 @@ for (const [name, entry, plugins] of [
 			toplevel: true,
 			ecma: 2020,
 			compress: { passes: 3, unsafe: true, unsafe_arrows: true, pure_getters: true },
+			mangle: { properties: entry === 'index' ? CORE_PROPS : FULL_PROPS },
 		});
 		if (!code) throw new Error('terser failed');
 		await Bun.write(`${DIST}${name}.${ext}`, code);
-		sizes.push([`${name}.${ext}`, code.length, gzipSync(code, { level: 9 }).length]);
+		sizes.push([`${name}.${ext}`, Buffer.byteLength(code), gzipSync(code, { level: 9 }).length]); // bytes, not chars: the bundle has a few non-ASCII literals
 	}
 }
 
