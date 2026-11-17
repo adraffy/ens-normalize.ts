@@ -25,10 +25,14 @@ let RANK: Map<number, number>; // cp => combining class rank, pre-shifted (rank 
 let DECOMP: Map<number, number[]>; // cp => canonical decomposition
 let RECOMP: Map<number, Map<number, number>>; // a => b => composed
 
-function init() {
+/**
+ * Load the tables. Must be called before nfc()/nfd(); lib.ts does this in init().
+ * `cm` is the sorted combining mark list from the ENS blob: ranks are stored as indices into it.
+ */
+export function initNF(cm: number[]) {
 	const r = reader(NF);
 	RANK = new Map();
-	for (let i = 1, n = r.uint(Ctx.RANK_COUNT); i <= n; i++) for (const cp of r.runs(Ctx.RANK)) RANK.set(cp, i << 24);
+	for (let i = 1, n = r.uint(Ctx.RANK_COUNT); i <= n; i++) for (const j of r.runs(Ctx.RANK)) RANK.set(cm[j], i << 24);
 	const exclusions = new Set(r.runs(Ctx.EXCLUSIONS));
 	DECOMP = new Map(readMapped(r, Ctx.DECOMP));
 	RECOMP = new Map();
@@ -56,7 +60,6 @@ function composePair(a: number, b: number): number {
 // Canonical reordering only buffers the non-starters after the last starter,
 // so nothing holds more than a run of combining marks.
 function normalize(cps: Iterable<number>, composing?: boolean): number[] {
-	if (!RANK) init();
 	const out: number[] = [];
 	const marks: number[] = []; // pending non-starters: (rank << 24) | cp
 	let starter = -1; // index of the last starter in out

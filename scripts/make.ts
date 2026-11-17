@@ -34,8 +34,10 @@ class Sections {
 
 // ************************************************************
 // shared: mapped table
+// gaps between keys don't count the cps in `skip`
+// outputs are predicted by the previous entry of the same width; the first output keeps that entry's offset from its key
 // contexts: c+0 count, c+1 gap, c+2..c+5 width, c+6..c+14 residual, c+15..c+16 derive flag
-function writeMapped(enc: Encoder, c: number, mapped: Mapped, derive?: (x: number) => number[] | undefined) {
+function writeMapped(enc: Encoder, c: number, mapped: Mapped, derive?: (x: number) => number[] | undefined, skip?: Set<number>) {
 	mapped = mapped.toSorted((a, b) => a[0] - b[0]);
 	enc.uint(c, mapped.length);
 	let px = -1;
@@ -43,7 +45,10 @@ function writeMapped(enc: Encoder, c: number, mapped: Mapped, derive?: (x: numbe
 	let pd = 0;
 	const last: Mapped = [];
 	for (const [x, ys] of mapped) {
-		enc.uint(c + 1, x - px - 1);
+		let gap = 0;
+		for (let i = px + 1; i < x; i++) if (!skip?.has(i)) gap++;
+		if (skip?.has(x)) throw new Error('mapped key in skip set');
+		enc.uint(c + 1, gap);
 		px = x;
 		if (derive) {
 			const d = derive(x);
@@ -55,9 +60,9 @@ function writeMapped(enc: Encoder, c: number, mapped: Mapped, derive?: (x: numbe
 		const w = ys.length;
 		enc.uint(c + 1 + Math.min(pw, 4), w - 1);
 		pw = w;
-		const prev = last[w]?.[1];
+		const prev = last[w];
 		for (let j = 0; j < w; j++) {
-			enc.sint(c + 6 + Math.min(j, 2) + 3 * Math.min(w - 1, 2), ys[j] - (prev ? prev[j] : x));
+			enc.sint(c + 6 + Math.min(j, 2) + 3 * Math.min(w - 1, 2), ys[j] - (prev ? prev[1][j] + (j ? 0 : x - prev[0]) : x));
 		}
 		last[w] = [x, ys];
 	}
@@ -71,7 +76,15 @@ function encodeNF() {
 	const sec = new Sections(enc);
 	const { ranks, exclusions, decomp } = nf as { ranks: number[][]; exclusions: number[]; decomp: Mapped };
 	enc.uint(Ctx.RANK_COUNT, ranks.length);
-	for (const v of ranks) enc.set(Ctx.RANK, v);
+	// every cp with a combining class is a combining mark, so ranks are stored as indices into the ENS blob's CM
+	const cmIndex = new Map<number, number>((spec.cm as number[]).toSorted((a, b) => a - b).map((x, i) => [x, i]));
+	for (const v of ranks) {
+		enc.set(Ctx.RANK, v.map((x) => {
+			const i = cmIndex.get(x);
+			if (i === undefined) throw new Error(`expected ranked cp in CM: ${x}`);
+			return i;
+		}));
+	}
 	sec.mark('ranks');
 	enc.set(Ctx.EXCLUSIONS, exclusions);
 	sec.mark('exclusions');
@@ -179,8 +192,6 @@ function encodeENS() {
 		escape: number[];
 	};
 
-	writeMapped(enc, Ctx.MAPPED, mapped, fullDecomp);
-	sec.mark('mapped');
 	enc.set(Ctx.IGNORED, ignored);
 	sec.mark('ignored');
 	enc.set(Ctx.CM, cm);
@@ -221,19 +232,25 @@ function encodeENS() {
 	enc.uint(Ctx.GROUP_NAME, 0); // empty name = end
 	sec.mark('groups');
 
-	// wholes: union of valid, union of confused, then back-refs over the sorted union
+	// mapped: gaps skip the valid cps
+	writeMapped(enc, Ctx.MAPPED, mapped, fullDecomp, new Set(groups.flatMap((g) => [...g.primary, ...g.secondary])));
+	sec.mark('mapped');
+
+	// wholes: union of valid, union of confused, then for each member of the sorted union,
+	// the recency rank of its whole (move-to-front)
 	type Flat = { cp: number; w: object; valid?: boolean };
 	const flat: Flat[] = wholes
 		.flatMap((w) => [...w.valid.map((cp) => ({ cp, w, valid: true })), ...w.confused.map((cp) => ({ cp, w }))])
 		.sort((a, b) => a.cp - b.cp);
 	enc.set(Ctx.WHOLE_VALID, flat.filter((f) => f.valid).map((f) => f.cp));
 	enc.set(Ctx.WHOLE_CONFUSED, flat.filter((f) => !f.valid).map((f) => f.cp));
-	const lastIndex = new Map<object, number>();
-	flat.forEach((f, i) => {
-		const j = lastIndex.get(f.w);
-		enc.uint(Ctx.WHOLE_LINK, j === undefined ? 0 : i - j);
-		lastIndex.set(f.w, i);
-	});
+	const recent: object[] = []; // most recently used first
+	for (const f of flat) {
+		const i = recent.indexOf(f.w);
+		enc.uint(Ctx.WHOLE_LINK, i + 1); // 0 = new whole
+		if (i >= 0) recent.splice(i, 1);
+		recent.unshift(f.w);
+	}
 	sec.mark('wholes');
 
 	// valid is closed under nfd: store the parts that aren't already valid

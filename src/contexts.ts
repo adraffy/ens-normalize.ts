@@ -4,7 +4,7 @@
 
 export const enum Ctx {
 	// ens
-	MAPPED = 0,
+	MAPPED = 0, // read after the groups: gaps skip valid cps
 	IGNORED = 20,
 	CM = 24,
 	NSM = 28, // indices into CM
@@ -17,7 +17,7 @@ export const enum Ctx {
 	GROUP_NSM = 58,
 	WHOLE_VALID = 59,
 	WHOLE_CONFUSED = 63,
-	WHOLE_LINK = 67,
+	WHOLE_LINK = 67, // recency rank of the member's whole, 0 = new
 	VALID_PARTS = 68, // decomposed parts of valid cps that aren't valid themselves
 	EMOJI_CPS = 72,
 	EMOJI_STATE = 76,
@@ -29,7 +29,7 @@ export const enum Ctx {
 
 	// nf
 	RANK_COUNT = 0,
-	RANK = 1,
+	RANK = 1, // indices into the ENS blob's CM
 	EXCLUSIONS = 5,
 	DECOMP = 10,
 }

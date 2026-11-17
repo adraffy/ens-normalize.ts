@@ -5,9 +5,13 @@ import ENS, { FENCED, NSM_MAX } from './generated/ens.ts';
 import { Ctx } from './contexts.ts';
 import { reader, readMapped, type Reader } from './decoder.ts';
 import { explodeCp, strFromCps, quoteCp } from './utils.ts';
-import { nfc, nfd } from './nf.ts';
+import { nfc as nfc0, nfd as nfd0, initNF } from './nf.ts';
 
-export { nfc, nfd };
+/** canonical decomposition */
+export const nfd = (cps: Iterable<number>): number[] => (init(), nfd0(cps));
+
+/** canonical composition */
+export const nfc = (cps: Iterable<number>): number[] => (init(), nfc0(cps));
 
 const HYPHEN = 0x2d;
 const UNDERSCORE = 0x5f;
@@ -61,11 +65,10 @@ export function init() {
 	if (MAPPED) return;
 	const r = reader(ENS);
 
-	// mapped entries flagged as canonical decompositions are derived
-	MAPPED = new Map(readMapped(r, Ctx.MAPPED, (cp) => nfd([cp])));
 	IGNORED = new Set(r.runs(Ctx.IGNORED));
 	const cm = r.runs(Ctx.CM);
 	CM = new Set(cm);
+	initNF(cm); // combining class ranks are stored as indices into cm
 	NSM = new Set(r.runs(Ctx.NSM).map((i) => cm[i]));
 	ESCAPE = new Set(r.runs(Ctx.ESCAPE)); // characters that should not be printed
 	GROUPS = readGroups(r);
@@ -78,6 +81,10 @@ export function init() {
 			for (const cp of set) (VALID.has(cp) ? multi : VALID).add(cp);
 		}
 	}
+
+	// mapped entries flagged as canonical decompositions are derived
+	// gaps between mapped cps skip the valid ones
+	MAPPED = new Map(readMapped(r, Ctx.MAPPED, (cp) => nfd0([cp]), VALID));
 
 	CONFUSABLES = readConfusables(r);
 	for (const cp of VALID) {
@@ -153,17 +160,14 @@ function readGroups(r: Reader): Group[] {
 function readConfusables(r: Reader) {
 	const ret = new Map<number, Set<Group>>();
 	const valid = new Set(r.runs(Ctx.WHOLE_VALID));
-	// each sorted member links to the previous member of its whole (0 = new whole)
-	const wholes: number[][] = [];
-	const owner: number[][] = [];
-	[...valid, ...r.runs(Ctx.WHOLE_CONFUSED)]
-		.sort((a, b) => a - b)
-		.forEach((cp, i) => {
-			const link = r.uint(Ctx.WHOLE_LINK);
-			let whole = link ? owner[i - link] : undefined;
-			if (!whole) wholes.push((whole = []));
-			(owner[i] = whole).push(cp);
-		});
+	// each sorted member names its whole by recency rank (0 = new whole)
+	const wholes: number[][] = []; // most recently used first
+	for (const cp of [...valid, ...r.runs(Ctx.WHOLE_CONFUSED)].sort((a, b) => a - b)) {
+		const rank = r.uint(Ctx.WHOLE_LINK);
+		const whole = rank ? wholes.splice(rank - 1, 1)[0] : [];
+		whole.push(cp);
+		wholes.unshift(whole);
+	}
 	for (const whole of wholes) {
 		// connect the groups of each member into extents
 		const extents: { groups: Set<Group>; cps: number[] }[] = [];
@@ -304,7 +308,7 @@ export function ensNormalizeFragment(frag: string, decompose?: boolean): string 
 	init();
 	return frag
 		.split(STOP_CH)
-		.map((label) => strFromCps(flat(outputTokenize(explodeCp(label), filterFE0F, decompose ? nfd : nfc))))
+		.map((label) => strFromCps(flat(outputTokenize(explodeCp(label), filterFE0F, decompose ? nfd0 : nfc0))))
 		.join(STOP_CH);
 }
 
@@ -445,7 +449,7 @@ function checkGroup(g: Group, cps: number[]) {
 	}
 	if (!g.checkNSM) return;
 	// https://www.unicode.org/reports/tr39/#Optional_Detection
-	const decomposed = nfd(cps);
+	const decomposed = nfd0(cps);
 	for (let i = 1, e = decomposed.length; i < e; i++) {
 		if (NSM.has(decomposed[i])) {
 			let j = i + 1;
@@ -499,7 +503,7 @@ export function findEmoji(cps: number[], pos: number): [number[], number] | unde
 
 // returns text and emoji tokens
 // eg. "abc💩d" => [{cps: [61, 62, 63]}, {cps: [1F4A9], emoji: true}, {cps: [64]}]
-export function outputTokenize(cps: number[], styler: EmojiStyler, nf = nfc): OutputToken[] {
+export function outputTokenize(cps: number[], styler: EmojiStyler, nf = nfc0): OutputToken[] {
 	const tokens: OutputToken[] = [];
 	let buf: number[] = [];
 	for (let i = 0; i < cps.length; ) {

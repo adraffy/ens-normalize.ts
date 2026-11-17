@@ -89,9 +89,9 @@ ensNormalizeFragment('é', true); // "e\u0301"
 
 | entry | min | gzip | 1.11.1 min | 1.11.1 gzip |
 |---|---:|---:|---:|---:|
-| `@adraffy/ens-normalize.ts` (core) | 22.7 KB | 16.4 KB | 38.3 KB | 26.1 KB |
-| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 17.1 KB | 12.1 KB | 29.3 KB | 19.4 KB |
-| `@adraffy/ens-normalize.ts/full` (everything) | 25.1 KB | 17.7 KB | 44.1 KB* | 28.2 KB* |
+| `@adraffy/ens-normalize.ts` (core) | 22.1 KB | 16.1 KB | 38.3 KB | 26.1 KB |
+| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 16.7 KB | 11.9 KB | 29.3 KB | 19.4 KB |
+| `@adraffy/ens-normalize.ts/full` (everything) | 24.6 KB | 17.4 KB | 44.1 KB* | 28.2 KB* |
 
 Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
@@ -195,15 +195,17 @@ The spec and test JSON aren't committed. They're fetched from ens-normalize.js, 
 - **Integers:** each one is written as Exp-Golomb, and its bits are modeled per context. A context is a field type such as "set gap", "run length", or "mapping residual" (`src/contexts.ts`). The top 3 mantissa bits use a bit-tree.
 - **Probabilities:** each bit's probability is the average of a fast estimate (rate 1/4) and a slow one (rate 1/32).
 - **Output alphabet:** the coder writes base-93 digits directly instead of bytes. The digits are printable ASCII without `'` or `\`, so the blob needs no escaping. That's about 6.5 bits per char, vs 6 for base64.
-- **Mapped table:** the 1,072 entries that equal `nfd(cp)` (CJK compatibility ideographs and similar) are flagged and derived at init instead of stored.
-- **Separate blobs:** NF, core ENS, and `nfc_check` (only `ensTokenize` needs it, so only `full` includes it).
+- **Mapped table:** the 1,072 entries that equal `nfd(cp)` (CJK compatibility ideographs and similar) are flagged and derived at init instead of stored. Gaps between mapped codepoints don't count the valid ones, which are already known from the groups. An entry's first output is predicted from the previous entry of the same width, shifted by the distance between their keys.
+- **Combining classes:** every codepoint with a combining class is a combining mark, so the NF blob stores them as indices into the ENS blob's CM set. That's why `lib.ts` loads the NF tables (`initNF(cm)`).
+- **Whole-script confusables:** each member names its whole by recency rank (move-to-front) instead of a back-reference.
+- **Separate blobs:** NF, core ENS, and `nfc_check` (only `ensTokenize` needs it, so only `full` includes it). The NF blob needs CM from the ENS blob to decode.
 - **Dropped:** NFC_QC, which the decoder never used.
 
 | blob | here (base-93) | 1.11.1 (base64) |
 |---|---:|---:|
-| ENS | 10,494 | 20,100 (includes nfc_check) |
+| ENS | 10,297 | 20,100 (includes nfc_check) |
 | nfc_check | 328 | |
-| NF | 4,730 | 7,568 |
+| NF | 4,461 | 7,568 |
 
 The make script verifies every symbol by decoding it with `src/decoder.ts`.
 If you change the model, change `scripts/encoder.ts` and `src/decoder.ts` together.

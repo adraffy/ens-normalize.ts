@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { nfc, nfd } from '../src/nf.ts';
+import { nfc, nfd } from '../src/lib.ts';
 import { explodeCp, strFromCps } from '../src/utils.ts';
 
 const tests: Record<string, [string, string, string][]> = await Bun.file(new URL('./data/nf-tests.json', import.meta.url)).json();

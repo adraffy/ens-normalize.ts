@@ -34,7 +34,7 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 | `src/lib.ts` | data loading (`init`) and validation (`processLabel`, `checkValid`, ...) |
 | `src/extras.ts` | `ensSplit`, `ensEmoji`, `isCombiningMark` (full only) |
 | `src/tokenize.ts` | `ensTokenize` (full only; has its own `nfc-check` blob) |
-| `src/nf.ts` | embedded NFC/NFD, a streaming decompose → reorder → compose pipeline |
+| `src/nf.ts` | embedded NFC/NFD, a streaming decompose → reorder → compose pipeline; `lib.ts` loads its tables with `initNF(cm)` |
 | `src/nf-native.ts` | `String.prototype.normalize()` swap-in for the `xnf` build |
 | `src/decoder.ts` | range decoder + `readMapped` |
 | `src/contexts.ts` | context ids shared by the encoder and the readers |
