@@ -18,7 +18,7 @@ Requires [Bun](https://bun.sh) 1.4+.
 ```sh
 bun install
 bun test             # all tests (downloads test data on first run)
-bun run test:labels  # every known ENS label vs ens-normalize.js (about 50 MB download, under a minute)
+bun run test:labels  # core API on every known ENS label vs ens-normalize.js (about 50 MB download, half a minute)
 bun run typecheck
 bun run build        # dist/ (Bun + terser minified, ESM + CJS) + dist/types; prints sizes
 bun scripts/make.ts  # regenerate src/generated/* from data/spec.json + data/nf.json
@@ -45,8 +45,7 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 | `scripts/build.ts` | bundles the `index`, `xnf`, and `full` entries |
 | `scripts/download.ts` | fetches spec + test data, pinned to an upstream commit (`UPSTREAM`) |
 | `test/` | bun tests; `test/fixtures/api-1.11.1.json` is output recorded from ens-normalize.js 1.11.1 |
-| `test/parity.ts` | builds the 1.11.1-shaped record of a name (and the helpers `labels.ts` shares) |
-| `test/labels.ts` | exhaustive comparison against ens-normalize.js over adraffy/ens-labels (not part of `bun test`) |
+| `test/labels.ts` | exhaustive comparison of the core API against ens-normalize.js over adraffy/ens-labels (not part of `bun test`) |
 | `test/browser/` | static browser test pages, deployed to GitHub Pages |
 
 `data/` and `test/data/` are downloaded and gitignored.
@@ -57,7 +56,7 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 - **Context ids live in `src/contexts.ts`.** A set uses 4 consecutive ids, and a mapped table uses 17. Don't overlap ranges.
 - **Regenerate after encoding changes:** run `bun scripts/make.ts` and commit `src/generated/`. CI fails if regenerating changes those files.
 - **Don't edit `src/generated/`** by hand.
-- **Keep parity.** If a change alters any output or error message, it's a bug unless it was asked for. For changes to the data encoding, the readers, or the build, also run `bun run test:labels` (it takes a bundle path too, e.g. `bun test/labels.ts dist/index.js`). Then update README "Compatibility", and update the conversion or skip list in `test/api.test.ts`. Never regenerate `test/fixtures/api-1.11.1.json` from this library; it has to come from ens-normalize.js.
+- **Keep parity.** If a change alters any output or error message, it's a bug unless it was asked for. Then update README "Compatibility", and update the conversion or skip list in `test/api.test.ts`. Never regenerate `test/fixtures/api-1.11.1.json` from this library; it has to come from ens-normalize.js. For changes to the data encoding, the readers, or the build, also run `bun run test:labels` (it takes a bundle path too, e.g. `bun test/labels.ts dist/index.js`).
 - **Don't use `Array` subclasses or rely on `Symbol.species`.** Hermes (React Native) doesn't support it; see ens-normalize.js#35. Emoji are tracked as `{ cps, emoji: true }` tokens.
 - **Keep core lean.** Anything that only `full` needs belongs in `extras.ts`/`tokenize.ts`, or in its own data blob. Bun doesn't inline constants across modules unless they're a `const enum`, and it doesn't mangle property names, so short property names matter.
 - **Language level:** emitted code may use up to ES2021 (`??=`, `?.`). The browser test pages avoid anything newer, so older browsers can run them.
