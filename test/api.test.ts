@@ -1,63 +1,13 @@
 // parity with @adraffy/ens-normalize@1.11.1 (fixture generated from that library)
 import { test, expect } from 'bun:test';
 import * as lib from '../src/full.ts';
-import type { Tokenized } from '../src/full.ts';
-
-// converts the new token shape to the one 1.11.1's ens_tokenize returned
-function legacy({ input, tokens }: Tokenized): unknown[] {
-	return tokens.map((t) => {
-		const cp = input[t.start];
-		switch (t.type) {
-			case 'stop':
-			case 'ignored':
-			case 'disallowed':
-				return { type: t.type, cp };
-			case 'valid':
-				return { type: t.type, cps: t.output };
-			case 'mapped':
-				return { type: t.type, cp, cps: t.output };
-			case 'emoji':
-				return { type: t.type, emoji: t.beautified, input: input.slice(t.start, t.end), cps: t.output };
-			case 'nfc':
-				return {
-					type: t.type,
-					input: t.before.flatMap((p) => (p.type == 'valid' || p.type == 'mapped' ? p.output : [])),
-					cps: t.output,
-					tokens0: legacy({ input, tokens: t.before }),
-					tokens: legacy({ input: t.output, tokens: t.after }),
-				};
-		}
-	});
-}
+import { record } from './parity.ts';
 
 type Case = { name: string; [k: string]: unknown };
 const cases: Case[] = await Bun.file(new URL('./fixtures/api-1.11.1.json', import.meta.url)).json();
 
-const run = (f: () => unknown) => {
-	try {
-		return f();
-	} catch (err) {
-		return { error: (err as Error).message };
-	}
-};
-const plain = (v: unknown) =>
-	JSON.parse(JSON.stringify(v, (k, x) => (x instanceof Error ? { error: x.message } : (k === 'emoji' && !x) || k === 'restricted' ? undefined : x)));
-
 test(`api parity (${cases.length} names)`, () => {
-	for (const c of cases) {
-		const { name } = c;
-		expect(
-			plain({
-				name,
-				normalize: run(() => lib.ensNormalize(name)),
-				beautify: run(() => lib.ensNormalize(name, { beautify: true })),
-				fragment: run(() => lib.ensNormalizeFragment(name)),
-				fragmentNFD: run(() => lib.ensNormalizeFragment(name, true)),
-				split: run(() => lib.ensSplit(name)),
-				tokenize: run(() => legacy(lib.ensTokenize(name))),
-			}),
-		).toEqual(c);
-	}
+	for (const c of cases) expect(record(lib, c.name)).toEqual(c as never);
 });
 
 test('examples', () => {
