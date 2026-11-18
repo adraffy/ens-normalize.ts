@@ -36,6 +36,7 @@
 		"make": "bun scripts/make.ts",
 		"build": "bun scripts/build.ts",
 		"test": "bun test",
+		"test:labels": "bun test/labels.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
