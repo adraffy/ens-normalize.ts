@@ -182,9 +182,17 @@ Requires [Bun](https://bun.sh).
 bun scripts/make.ts   # data/*.json => src/generated/*.ts (downloads spec if missing)
 bun run build         # dist/ (esm + cjs, Bun + terser minified) + dist/types
 bun test              # downloads tests if missing
+bun run test:labels   # exhaustive check against ens-normalize.js (see below)
 ```
 
 The spec and test JSON aren't committed. They're fetched from ens-normalize.js, pinned to the commit in `scripts/download.ts`. Bump `UPSTREAM` there and run `bun run download` to update.
+
+### Exhaustive check
+
+`bun run test:labels` runs every label in [adraffy/ens-labels](https://github.com/adraffy/ens-labels) (3,422,100 labels seen in ENS contract events and primary names) through this library and through ens-normalize.js, and compares every output and error message of the core API: normalize, beautify, and fragment.
+It isn't part of `bun test`: the first run downloads `labels.json` (about 50 MB) and ens-normalize.js, both pinned in `scripts/download.ts`, and a run takes about half a minute.
+Pass a path to check a built bundle instead of the source, for example `bun test/labels.ts dist/index.js`.
+`ensSplit` and `ensTokenize` aren't compared here; `test/api.test.ts` checks them against output recorded from 1.11.1.
 
 ### Data encoding
 
