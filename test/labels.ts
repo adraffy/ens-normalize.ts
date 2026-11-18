@@ -1,6 +1,6 @@
 // Exhaustive parity check: runs every known ENS label (adraffy/ens-labels, about 3.4M)
 // through this library and through ens-normalize.js, and compares every result and error message.
-// Not part of `bun test`: it downloads about 50 MB on first run and takes a few minutes.
+// Not part of `bun test`: it downloads about 50 MB on first run and takes most of a minute.
 //
 // usage:
 //   bun test/labels.ts                # src/full.ts
@@ -8,10 +8,18 @@
 
 import { resolve } from 'node:path';
 import { ensureLabels } from '../scripts/download.ts';
-import { legacy, plain, run, type Upstream } from './parity.ts';
+import { plain, run } from './parity.ts';
 import type * as Lib from '../src/full.ts';
 
 await ensureLabels();
+
+/** the parts of ens-normalize.js compared here (ens_tokenize is left out; api.test.ts covers it against the fixture) */
+type Upstream = {
+	ens_normalize(name: string): string;
+	ens_beautify(name: string): string;
+	ens_normalize_fragment(frag: string, decompose?: boolean): string;
+	ens_split(name: string, preserve_emoji?: boolean): unknown[];
+};
 
 const target = process.argv[2] ?? 'src/full.ts';
 const lib: Partial<typeof Lib> & Pick<typeof Lib, 'ensNormalize' | 'ensNormalizeFragment'> = await import(resolve(target));
@@ -19,7 +27,7 @@ const upstream: Upstream = await import(new URL('./data/ens-normalize.mjs', impo
 const labels: string[] = await Bun.file(new URL('./data/labels.json', import.meta.url)).json();
 
 // [field, this library, ens-normalize.js]
-const { ensSplit, ensTokenize } = lib;
+const { ensSplit } = lib;
 const fields: [string, (s: string) => unknown, (s: string) => unknown][] = [
 	['normalize', (s) => lib.ensNormalize(s), (s) => upstream.ens_normalize(s)],
 	['beautify', (s) => lib.ensNormalize(s, { beautify: true }), (s) => upstream.ens_beautify(s)],
@@ -27,7 +35,6 @@ const fields: [string, (s: string) => unknown, (s: string) => unknown][] = [
 	['fragmentNFD', (s) => lib.ensNormalizeFragment(s, true), (s) => upstream.ens_normalize_fragment(s, true)],
 ];
 if (ensSplit) fields.push(['split', (s) => ensSplit(s), (s) => upstream.ens_split(s)]);
-if (ensTokenize) fields.push(['tokenize', (s) => legacy(ensTokenize(s)), (s) => upstream.ens_tokenize(s)]);
 
 const short = (v: unknown) => {
 	const s = JSON.stringify(v);

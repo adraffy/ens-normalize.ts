@@ -18,7 +18,7 @@ Requires [Bun](https://bun.sh) 1.4+.
 ```sh
 bun install
 bun test             # all tests (downloads test data on first run)
-bun run test:labels  # every known ENS label vs ens-normalize.js (about 50 MB download, a minute or so)
+bun run test:labels  # every known ENS label vs ens-normalize.js (about 50 MB download, under a minute)
 bun run typecheck
 bun run build        # dist/ (Bun + terser minified, ESM + CJS) + dist/types; prints sizes
 bun scripts/make.ts  # regenerate src/generated/* from data/spec.json + data/nf.json
@@ -45,7 +45,7 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 | `scripts/build.ts` | bundles the `index`, `xnf`, and `full` entries |
 | `scripts/download.ts` | fetches spec + test data, pinned to an upstream commit (`UPSTREAM`) |
 | `test/` | bun tests; `test/fixtures/api-1.11.1.json` is output recorded from ens-normalize.js 1.11.1 |
-| `test/parity.ts` | builds the 1.11.1-shaped record of a name, for this library and for ens-normalize.js |
+| `test/parity.ts` | builds the 1.11.1-shaped record of a name (and the helpers `labels.ts` shares) |
 | `test/labels.ts` | exhaustive comparison against ens-normalize.js over adraffy/ens-labels (not part of `bun test`) |
 | `test/browser/` | static browser test pages, deployed to GitHub Pages |
 

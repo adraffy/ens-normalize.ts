@@ -1,16 +1,7 @@
 // What a library does with a name, in the shape of ens-normalize.js 1.11.1's output.
-// Shared by api.test.ts (against the recorded fixture) and labels.ts (against ens-normalize.js itself).
+// api.test.ts checks it against the recorded fixture; labels.ts uses run() and plain() against ens-normalize.js itself.
 import type * as Lib from '../src/full.ts';
 import type { Tokenized } from '../src/full.ts';
-
-/** the parts of ens-normalize.js that have a counterpart here */
-export type Upstream = {
-	ens_normalize(name: string): string;
-	ens_beautify(name: string): string;
-	ens_normalize_fragment(frag: string, decompose?: boolean): string;
-	ens_split(name: string, preserve_emoji?: boolean): unknown[];
-	ens_tokenize(name: string): unknown[];
-};
 
 export type Record = {
 	name: string;
@@ -73,18 +64,5 @@ export function record(lib: typeof Lib, name: string): Record {
 		fragmentNFD: run(() => lib.ensNormalizeFragment(name, true)),
 		split: run(() => lib.ensSplit(name)),
 		tokenize: run(() => legacy(lib.ensTokenize(name))),
-	});
-}
-
-/** record for ens-normalize.js */
-export function recordUpstream(lib: Upstream, name: string): Record {
-	return plain({
-		name,
-		normalize: run(() => lib.ens_normalize(name)),
-		beautify: run(() => lib.ens_beautify(name)),
-		fragment: run(() => lib.ens_normalize_fragment(name)),
-		fragmentNFD: run(() => lib.ens_normalize_fragment(name, true)),
-		split: run(() => lib.ens_split(name)),
-		tokenize: run(() => lib.ens_tokenize(name)),
 	});
 }

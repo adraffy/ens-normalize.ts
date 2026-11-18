@@ -189,8 +189,8 @@ The spec and test JSON aren't committed. They're fetched from ens-normalize.js, 
 
 ### Exhaustive check
 
-`bun run test:labels` runs every label in [adraffy/ens-labels](https://github.com/adraffy/ens-labels) (3,422,100 labels seen in ENS contract events and primary names) through this library and through ens-normalize.js, and compares every output and error message of normalize, beautify, fragment, split, and tokenize.
-It isn't part of `bun test`: the first run downloads `labels.json` (about 50 MB) and ens-normalize.js, both pinned in `scripts/download.ts`, and a run takes about a minute.
+`bun run test:labels` runs every label in [adraffy/ens-labels](https://github.com/adraffy/ens-labels) (3,422,100 labels seen in ENS contract events and primary names) through this library and through ens-normalize.js, and compares every output and error message of normalize, beautify, fragment, and split.
+It isn't part of `bun test`: the first run downloads `labels.json` (about 50 MB) and ens-normalize.js, both pinned in `scripts/download.ts`, and a run takes under a minute.
 Pass a path to check a built bundle instead of the source, for example `bun test/labels.ts dist/index.js`.
 
 ### Data encoding
