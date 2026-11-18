@@ -87,13 +87,13 @@ ensNormalizeFragment('é', true); // "e\u0301"
 
 ## Size
 
-| entry | min | gzip | 1.11.1 min | 1.11.1 gzip |
-|---|---:|---:|---:|---:|
-| `@adraffy/ens-normalize.ts` (core) | 22.7 KB | 16.4 KB | 38.3 KB | 26.1 KB |
-| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 17.1 KB | 12.1 KB | 29.3 KB | 19.4 KB |
-| `@adraffy/ens-normalize.ts/full` (everything) | 25.1 KB | 17.7 KB | 44.1 KB* | 28.2 KB* |
+| entry | min | gzip | 1.11.1 min | 1.11.1 gzip | min savings |
+|---|---:|---:|---:|---:|---:|
+| `@adraffy/ens-normalize.ts` (core) | 22.7 KB | 16.4 KB | 38.3 KB | 26.1 KB | 40.7% |
+| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 17.1 KB | 12.1 KB | 29.3 KB | 19.4 KB | 41.6% |
+| `@adraffy/ens-normalize.ts/full` (everything) | 25.1 KB | 17.7 KB | 44.1 KB* | 28.2 KB* | 43.1% |
 
-Sizes are minified ESM; gzip is level 9. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
+Sizes are minified ESM; gzip is level 9. Savings is min vs 1.11.1 min. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
 
 **Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 48 ms, vs 54 ms for 1.11.1.
