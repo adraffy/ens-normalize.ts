@@ -217,9 +217,11 @@ Pass a path to check a built bundle instead of the source, for example `bun test
 
 | blob | ens-normalize.js (base64) | ens-normalize.ts (base-93) |
 |---|---:|---:|
-| ENS | 20,100 (includes nfc_check) | 10,297 |
+| ENS | 20,100* | 10,297 |
 | nfc_check | | 328 |
 | NF | 7,568 | 4,461 |
+
+\* includes nfc_check
 
 The make script verifies every symbol by decoding it with `src/decoder.ts`.
 If you change the model, change `scripts/encoder.ts` and `src/decoder.ts` together.
