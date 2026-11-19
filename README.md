@@ -89,24 +89,24 @@ ensNormalizeFragment('é', true); // "e\u0301"
 
 <table>
 <thead>
-<tr><th rowspan="2">entry</th><th colspan="2">ens-normalize.ts</th><th colspan="2"><a href="https://github.com/adraffy/ens-normalize.js">ens-normalize.js</a> 1.11.1</th><th rowspan="2">min savings</th></tr>
-<tr><th>min</th><th>gzip</th><th>min</th><th>gzip</th></tr>
+<tr><th rowspan="2" align="left">import</th><th colspan="2" align="center"><a href="https://github.com/adraffy/ens-normalize.js">ens-normalize.js</a></th><th colspan="2" align="center">ens-normalize.ts</th><th rowspan="2" align="right">smaller</th></tr>
+<tr><th align="right">min</th><th align="right">gzip</th><th align="right">min</th><th align="right">gzip</th></tr>
 </thead>
 <tbody>
-<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">22.1 KB</td><td align="right">16.1 KB</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">42.4%</td></tr>
-<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">16.7 KB</td><td align="right">11.9 KB</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">42.9%</td></tr>
-<tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">24.6 KB</td><td align="right">17.4 KB</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">44.3%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">22.1 KB</td><td align="right">16.1 KB</td><td align="right">42.4%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">16.7 KB</td><td align="right">11.9 KB</td><td align="right">42.9%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">24.6 KB</td><td align="right">17.4 KB</td><td align="right">44.3%</td></tr>
 </tbody>
 </table>
 
-Sizes are minified ESM; gzip is level 9. Savings is min vs 1.11.1 min. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
+Sizes are minified ESM; gzip is level 9. Smaller compares the min sizes. The ens-normalize.js columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from the 1.11.1 `dist/`.
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
 
 **Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 48 ms, vs 54 ms for 1.11.1.
 
 ## Full API
 
-| ens-normalize.js | here | entry |
+| ens-normalize.js | ens-normalize.ts | import |
 |---|---|---|
 | `ens_normalize` | `ensNormalize(name)` | core |
 | `ens_beautify` | `ensNormalize(name, {beautify: true})` | core |
@@ -215,11 +215,11 @@ Pass a path to check a built bundle instead of the source, for example `bun test
 - **Separate blobs:** NF, core ENS, and `nfc_check` (only `ensTokenize` needs it, so only `full` includes it). The NF blob needs CM from the ENS blob to decode.
 - **Dropped:** NFC_QC, which the decoder never used.
 
-| blob | here (base-93) | 1.11.1 (base64) |
+| blob | ens-normalize.js (base64) | ens-normalize.ts (base-93) |
 |---|---:|---:|
-| ENS | 10,297 | 20,100 (includes nfc_check) |
-| nfc_check | 328 | |
-| NF | 4,461 | 7,568 |
+| ENS | 20,100 (includes nfc_check) | 10,297 |
+| nfc_check | | 328 |
+| NF | 7,568 | 4,461 |
 
 The make script verifies every symbol by decoding it with `src/decoder.ts`.
 If you change the model, change `scripts/encoder.ts` and `src/decoder.ts` together.
