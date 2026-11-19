@@ -89,7 +89,7 @@ ensNormalizeFragment('é', true); // "e\u0301"
 
 <table>
 <thead>
-<tr><th rowspan="2" align="left">import</th><th colspan="2" align="center"><a href="https://github.com/adraffy/ens-normalize.js">ens-normalize.js</a></th><th colspan="2" align="center">ens-normalize.ts</th><th rowspan="2" align="right">smaller</th></tr>
+<tr><th rowspan="2" valign="bottom" align="left">import</th><th colspan="2" align="center"><a href="https://github.com/adraffy/ens-normalize.js">ens-normalize.js</a></th><th colspan="2" align="center">ens-normalize.ts</th><th rowspan="2" valign="bottom" align="right">smaller</th></tr>
 <tr><th align="right">min</th><th align="right">gzip</th><th align="right">min</th><th align="right">gzip</th></tr>
 </thead>
 <tbody>
@@ -215,13 +215,19 @@ Pass a path to check a built bundle instead of the source, for example `bun test
 - **Separate blobs:** NF, core ENS, and `nfc_check` (only `ensTokenize` needs it, so only `full` includes it). The NF blob needs CM from the ENS blob to decode.
 - **Dropped:** NFC_QC, which the decoder never used.
 
-| blob | ens-normalize.js (base64) | ens-normalize.ts (base-93) |
-|---|---:|---:|
-| ENS | 20,100* | 10,297 |
-| nfc_check | | 328 |
-| NF | 7,568 | 4,461 |
+<table>
+<thead>
+<tr><th rowspan="2" valign="bottom" align="left">blob</th><th align="center">ens-normalize.js</th><th align="center">ens-normalize.ts</th></tr>
+<tr><th align="right">base64</th><th align="right">base-93</th></tr>
+</thead>
+<tbody>
+<tr><td>ENS</td><td align="right">20,100*</td><td align="right">10,297</td></tr>
+<tr><td>nfc_check</td><td></td><td align="right">328</td></tr>
+<tr><td>NF</td><td align="right">7,568</td><td align="right">4,461</td></tr>
+</tbody>
+</table>
 
-<sub>* includes nfc_check</sub>
+<sup>* includes nfc_check</sup>
 
 The make script verifies every symbol by decoding it with `src/decoder.ts`.
 If you change the model, change `scripts/encoder.ts` and `src/decoder.ts` together.
