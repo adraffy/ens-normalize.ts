@@ -203,6 +203,8 @@ function encodeENS() {
 
 	// groups
 	if (groups.some((g) => Array.isArray(g.cm) && g.cm.length)) throw new Error('expected no complex CM sequences');
+	// checkWhole() counts the groups a cp is in, which is only the number of sets it's in if these don't overlap
+	if (groups.some((g) => g.secondary.some((cp) => g.primary.includes(cp)))) throw new Error('expected primary and secondary to be disjoint');
 	const chunks = findSharedChunks(groups.flatMap((g) => [g.primary, g.secondary]));
 	enc.uint(Ctx.CHUNK_COUNT, chunks.length);
 	for (const v of chunks) enc.set(Ctx.CHUNK, v);

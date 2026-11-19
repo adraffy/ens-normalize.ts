@@ -21,7 +21,9 @@ const nativeNF: BunPlugin = {
 const CORE_PROPS = { reserved: ['beautify', 'cause', 'ensNormalize', 'ensNormalizeFragment', 'exports', '__esModule'] };
 // full returns objects (labels, tokens), so only rename properties that never leave the library.
 // A name listed here must not also be a public field.
-const FULL_PROPS = { regex: /^(uint|sint|runs|primary|secondary|checkNSM|branches|state)$/ };
+// terser never renames a property that shares its name with a builtin (`name`, `has`, `groups`, `state`, ...),
+// which is why internal properties have names like `typeName` and `groupSet`.
+const FULL_PROPS = { regex: /^(uint|sint|runs|own|primary|rest|checkNSM|branches|bits|typeName|groupSet)$/ };
 
 await rm(DIST, { recursive: true, force: true });
 
