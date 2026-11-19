@@ -221,7 +221,7 @@ Pass a path to check a built bundle instead of the source, for example `bun test
 | nfc_check | | 328 |
 | NF | 7,568 | 4,461 |
 
-\* includes nfc_check
+<sub>* includes nfc_check</sub>
 
 The make script verifies every symbol by decoding it with `src/decoder.ts`.
 If you change the model, change `scripts/encoder.ts` and `src/decoder.ts` together.
