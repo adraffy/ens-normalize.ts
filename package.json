@@ -1,6 +1,6 @@
 {
 	"name": "@adraffy/ens-normalize.ts",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "ENSIP-15 ENS Name Normalizer in TypeScript (zero dependencies)",
 	"keywords": ["ENS", "ENSIP-15", "Ethereum", "UTS-46", "Normalize", "NFC", "NFD"],
 	"license": "MIT",
