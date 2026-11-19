@@ -17,7 +17,9 @@ const HYPHEN = 0x2d;
 const UNDERSCORE = 0x5f;
 const STOP_CH = '.';
 const FE0F = 0xfe0f;
-const UNIQUE = 1; // confusable placeholder: valid in exactly one group and not confusable
+// what checkWhole() remembers about a cp that isn't confusable
+const UNIQUE = 1; // valid in exactly one group
+const SHARED = 0; // valid in 2+ groups
 
 // ************************************************************
 // data
@@ -25,20 +27,23 @@ const UNIQUE = 1; // confusable placeholder: valid in exactly one group and not 
 /** what a valid label is: a script group, or ASCII/Emoji */
 type LabelType = {
 	/** display name: "ASCII", "Emoji", "Latin", "Restricted[Xxxx]", ... */
-	name: string;
+	typeName: string;
 	/** a restricted (excluded or limited-use) script */
 	restricted?: boolean;
 };
 
-const ASCII: LabelType = { name: 'ASCII' };
-const EMOJI: LabelType = { name: 'Emoji' };
+const ASCII: LabelType = { typeName: 'ASCII' };
+const EMOJI: LabelType = { typeName: 'Emoji' };
 
 type Group = LabelType & {
-	primary: Set<number>;
-	secondary: Set<number>;
+	/** primary cps of this group alone */
+	own: Set<number>;
+	/** all primary cps: `own`, then any shared chunks (which aren't copied) */
+	primary: Set<number>[];
+	/** every set of the group but `own`: the primary chunks, the secondary cps, and the secondary chunks */
+	rest: Set<number>[];
 	/** enforce non-spacing mark rules (not CM-whitelisted) */
 	checkNSM: boolean;
-	has(cp: number): boolean;
 };
 
 /** a run of text (normalized) or a single emoji (styled) */
@@ -53,9 +58,19 @@ export let NSM: Set<number>;
 let ESCAPE: Set<number>;
 let GROUPS: Group[];
 export let VALID: Set<number>; // possibly valid: union of groups + decomposed parts
-let CONFUSABLES: Map<number, Set<Group> | typeof UNIQUE>; // cp => groups outside its confusable extent
+// confused cp => groups outside its confusable extent
+// any other cp is filled in on first use by checkWhole(): UNIQUE if it's valid in only one group, else SHARED
+let CONFUSABLES: Map<number, Set<Group> | typeof UNIQUE | typeof SHARED> | undefined;
+let makeConfusables: () => NonNullable<typeof CONFUSABLES>; // built on first use: only labels that aren't ASCII need it
 export let EMOJI_LIST: number[][]; // fully-qualified, unsorted
 let EMOJI_ROOT: EmojiNode;
+
+// a plain loop: this is the hot path of group matching, and `for of` or `some()` is measurably slower here
+const inAny = (sets: Set<number>[], cp: number) => {
+	for (let i = 0; i < sets.length; i++) if (sets[i].has(cp)) return true;
+};
+// most groups only have `own`
+const inGroup = (g: Group, cp: number) => g.own.has(cp) || inAny(g.rest, cp);
 
 function addMany<T>(set: Set<T>, v: Iterable<T>) {
 	for (const x of v) set.add(x);
@@ -71,25 +86,13 @@ export function init() {
 	initNF(cm); // combining class ranks are stored as indices into cm
 	NSM = new Set(r.runs(Ctx.NSM).map((i) => cm[i]));
 	ESCAPE = new Set(r.runs(Ctx.ESCAPE)); // characters that should not be printed
-	GROUPS = readGroups(r);
-
-	// valid = union of groups
-	VALID = new Set();
-	const multi = new Set<number>(); // valid in 2+ groups
-	for (const g of GROUPS) {
-		for (const set of [g.primary, g.secondary]) {
-			for (const cp of set) (VALID.has(cp) ? multi : VALID).add(cp);
-		}
-	}
+	GROUPS = readGroups(r); // also sets VALID to the union of the groups
 
 	// mapped entries flagged as canonical decompositions are derived
 	// gaps between mapped cps skip the valid ones
 	MAPPED = new Map(readMapped(r, Ctx.MAPPED, (cp) => nfd0([cp]), VALID));
 
-	CONFUSABLES = readConfusables(r);
-	for (const cp of VALID) {
-		if (!multi.has(cp) && !CONFUSABLES.has(cp)) CONFUSABLES.set(cp, UNIQUE);
-	}
+	makeConfusables = readConfusables(r);
 
 	// valid is closed under nfd: add the decomposed parts that aren't valid on their own
 	addMany(VALID, r.runs(Ctx.VALID_PARTS));
@@ -116,20 +119,19 @@ export function init() {
 }
 
 function readGroups(r: Reader): Group[] {
-	// large shared sets (eg. Han) are stored once as chunks
-	const chunks: number[][] = [];
-	for (let n = r.uint(Ctx.CHUNK_COUNT); n--; ) chunks.push(r.runs(Ctx.CHUNK));
-	const shared = new Map<string, Set<number>>(); // identical sets (eg. Korean/Japanese secondary) share one Set
+	// large shared sets (eg. Han) are stored once as chunks, and groups refer to them instead of copying 100K+ cps
+	const chunks: Set<number>[] = [];
+	VALID = new Set();
+	const readSet = (c: number) => {
+		const v = r.runs(c);
+		addMany(VALID, v);
+		return new Set(v);
+	};
+	for (let n = r.uint(Ctx.CHUNK_COUNT); n--; ) chunks.push(readSet(Ctx.CHUNK));
+	// a group's own cps, then the chunks it uses (which are read first)
 	const readChunked = (c: number) => {
-		const parts = r.runs(c);
-		const extra = r.runs(c + 4);
-		const key = `${parts}|${extra}`;
-		let set = shared.get(key);
-		if (!set) {
-			shared.set(key, (set = new Set(extra)));
-			for (const i of parts) addMany(set, chunks[i]);
-		}
-		return set;
+		const parts = r.runs(c).map((i) => chunks[i]);
+		return [readSet(c + 4), ...parts];
 	};
 	const unrestricted = r.uint(Ctx.UNRESTRICTED); // unrestricted groups come first
 	const readName = () => {
@@ -143,22 +145,21 @@ function readGroups(r: Reader): Group[] {
 		const name = strFromCps(letters);
 		const restricted = groups.length >= unrestricted;
 		const primary = readChunked(Ctx.GROUP_PRIMARY);
-		const secondary = readChunked(Ctx.GROUP_SECONDARY);
 		groups.push({
-			name: restricted ? `Restricted[${name}]` : name,
+			typeName: restricted ? `Restricted[${name}]` : name,
 			restricted,
+			own: primary[0],
 			primary,
-			secondary,
+			rest: [...primary.slice(1), ...readChunked(Ctx.GROUP_SECONDARY)].filter((set) => set.size),
 			checkNSM: !!r.uint(Ctx.GROUP_NSM),
-			has: (cp) => primary.has(cp) || secondary.has(cp),
 		});
 	}
 	return groups;
 }
 
 // whole-script confusables: for each confused cp, the groups outside its extent
-function readConfusables(r: Reader) {
-	const ret = new Map<number, Set<Group>>();
+// reads the wholes now, and returns a function that works out the extents
+function readConfusables(r: Reader): typeof makeConfusables {
 	const valid = new Set(r.runs(Ctx.WHOLE_VALID));
 	// each sorted member names its whole by recency rank (0 = new whole)
 	const wholes: number[][] = []; // most recently used first
@@ -168,41 +169,44 @@ function readConfusables(r: Reader) {
 		whole.push(cp);
 		wholes.unshift(whole);
 	}
-	for (const whole of wholes) {
-		// connect the groups of each member into extents
-		const extents: { groups: Set<Group>; cps: number[] }[] = [];
-		for (const cp of whole) {
-			const gs = GROUPS.filter((g) => g.has(cp));
-			let extent = extents.find(({ groups }) => gs.some((g) => groups.has(g)));
-			if (!extent) extents.push((extent = { groups: new Set(), cps: [] }));
-			extent.cps.push(cp);
-			addMany(extent.groups, gs);
+	return () => {
+		const ret: ReturnType<typeof makeConfusables> = new Map();
+		for (const whole of wholes) {
+			// connect the groups of each member into extents
+			const extents: { groupSet: Set<Group>; cps: number[] }[] = [];
+			for (const cp of whole) {
+				const gs = GROUPS.filter((g) => inGroup(g, cp));
+				let extent = extents.find(({ groupSet }) => gs.some((g) => groupSet.has(g)));
+				if (!extent) extents.push((extent = { groupSet: new Set(), cps: [] }));
+				extent.cps.push(cp);
+				addMany(extent.groupSet, gs);
+			}
+			const union = extents.flatMap(({ groupSet }) => [...groupSet]);
+			for (const { groupSet, cps } of extents) {
+				const complement = new Set(union.filter((g) => !groupSet.has(g)));
+				for (const cp of cps) if (!valid.has(cp)) ret.set(cp, complement);
+			}
 		}
-		const union = extents.flatMap(({ groups }) => [...groups]);
-		for (const { groups, cps } of extents) {
-			const complement = new Set(union.filter((g) => !groups.has(g)));
-			for (const cp of cps) if (!valid.has(cp)) ret.set(cp, complement);
-		}
-	}
-	return ret;
+		return ret;
+	};
 }
 
 // see writeEmoji() in scripts/make.ts
 function readEmoji(r: Reader): number[][] {
-	type Node = { state: number; branches: Node[]; cps: number[] };
+	type Node = { bits: number; branches: Node[]; cps: number[] };
 	const ret: number[][] = [];
 	const sorted = r.runs(Ctx.EMOJI_CPS);
 	const read = (cps: number[]): Node => {
-		const state = r.uint(Ctx.EMOJI_STATE); // 1 = valid, 2 = save modifier, 4 = check modifier
+		const bits = r.uint(Ctx.EMOJI_STATE); // 1 = valid, 2 = save modifier, 4 = check modifier
 		const branches: Node[] = [];
 		for (let v; (v = r.runs(Ctx.EMOJI_BRANCH)).length; ) branches.push(read(v.map((i) => sorted[i])));
-		return { state, branches, cps };
+		return { bits, branches, cps };
 	};
-	const expand = ({ state, branches }: Node, path: number[], saved?: number) => {
+	const expand = ({ bits, branches }: Node, path: number[], saved?: number) => {
 		const last = path[path.length - 1];
-		if (state & 4 && saved === last) return; // same modifier twice
-		if (state & 2) saved = last;
-		if (state & 1) ret.push(path);
+		if (bits & 4 && saved === last) return; // same modifier twice
+		if (bits & 2) saved = last;
+		if (bits & 1) ret.push(path);
 		for (const br of branches) for (const cp of br.cps) expand(br, [...path, cp], saved);
 	};
 	expand(read([]), []);
@@ -231,9 +235,9 @@ const errorDisallowed = (cp: number) => new Error(`disallowed character: ${quote
 
 function errorMixture(g: Group, cp: number): Error {
 	let conflict = quotedCp(cp);
-	const other = GROUPS.find((g) => g.primary.has(cp)); // only check primary
-	if (other) conflict = `${other.name} ${conflict}`;
-	return new Error(`illegal mixture: ${g.name} + ${conflict}`);
+	const other = GROUPS.find((g) => inAny(g.primary, cp)); // only check primary
+	if (other) conflict = `${other.typeName} ${conflict}`;
+	return new Error(`illegal mixture: ${g.typeName} + ${conflict}`);
 }
 
 // ************************************************************
@@ -357,8 +361,8 @@ export function processLabel(input: number[], styler: EmojiStyler, info: LabelIn
 	if (!tokens.length) throw new Error('empty label'); // the label could have been only ignored characters
 	const norm = (info.output = flat(tokens));
 	checkLeadingUnderscore(norm);
-	const { name, restricted } = checkValid(tokens, norm, (info.emoji = tokens.length > 1 || !!tokens[0].emoji));
-	info.type = name;
+	const { typeName, restricted } = checkValid(tokens, norm, (info.emoji = tokens.length > 1 || !!tokens[0].emoji));
+	info.type = typeName;
 	info.restricted = !!restricted;
 	return info as Required<LabelInfo>;
 }
@@ -426,9 +430,9 @@ function checkFenced(cps: number[]) {
 function determineGroup(unique: number[]): Group {
 	let groups = GROUPS;
 	for (const cp of unique) {
-		const gs = groups.filter((g) => g.has(cp));
+		const gs = groups.filter((g) => inGroup(g, cp));
 		if (!gs.length) {
-			if (!GROUPS.some((g) => g.has(cp))) {
+			if (!GROUPS.some((g) => inGroup(g, cp))) {
 				// the character was composed of valid parts but its NFC form is invalid
 				throw errorDisallowed(cp);
 			}
@@ -445,7 +449,7 @@ function determineGroup(unique: number[]): Group {
 // assumption: cps.length > 0 and cps[0] isn't a CM
 function checkGroup(g: Group, cps: number[]) {
 	for (const cp of cps) {
-		if (!g.has(cp)) throw errorMixture(g, cp);
+		if (!inGroup(g, cp)) throw errorMixture(g, cp);
 	}
 	if (!g.checkNSM) return;
 	// https://www.unicode.org/reports/tr39/#Optional_Detection
@@ -473,7 +477,11 @@ function checkWhole(g: Group, unique: number[]) {
 	let maker: Group[] | undefined; // groups that could make a confusable whole
 	const shared: number[] = [];
 	for (const cp of unique) {
-		const complement = CONFUSABLES.get(cp);
+		let complement = (CONFUSABLES ??= makeConfusables()).get(cp);
+		if (complement === undefined) {
+			// not confusable: remember whether a second group has it (finding out at init for every valid cp is slow)
+			CONFUSABLES.set(cp, (complement = GROUPS.filter((g) => inGroup(g, cp))[1] ? SHARED : UNIQUE));
+		}
 		if (complement === UNIQUE) return; // unique, non-confusable
 		if (complement) {
 			maker = maker ? maker.filter((g) => complement.has(g)) : [...complement];
@@ -484,8 +492,8 @@ function checkWhole(g: Group, unique: number[]) {
 	}
 	// check if any of the remaining groups contain the shared characters too
 	for (const other of maker ?? []) {
-		if (shared.every((cp) => other.has(cp))) {
-			throw new Error(`whole-script confusable: ${g.name}/${other.name}`);
+		if (shared.every((cp) => inGroup(other, cp))) {
+			throw new Error(`whole-script confusable: ${g.typeName}/${other.typeName}`);
 		}
 	}
 }

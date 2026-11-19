@@ -93,8 +93,8 @@ ensNormalizeFragment('é', true); // "e\u0301"
 <tr><th align="right">min</th><th align="right">gzip</th><th align="right">min</th><th align="right">gzip</th></tr>
 </thead>
 <tbody>
-<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">22.1 KB</td><td align="right">16.1 KB</td><td align="right">42.4%</td></tr>
-<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">16.7 KB</td><td align="right">11.9 KB</td><td align="right">42.9%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">22.0 KB</td><td align="right">16.1 KB</td><td align="right">42.4%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">16.7 KB</td><td align="right">12.0 KB</td><td align="right">43.0%</td></tr>
 <tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">24.6 KB</td><td align="right">17.4 KB</td><td align="right">44.3%</td></tr>
 </tbody>
 </table>
@@ -102,7 +102,7 @@ ensNormalizeFragment('é', true); // "e\u0301"
 Sizes are minified ESM; gzip is level 9. Smaller compares the min sizes. The ens-normalize.js columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from the 1.11.1 `dist/`.
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
 
-**Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 48 ms, vs 54 ms for 1.11.1.
+**Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 19 ms under Bun and 31 ms under Node, vs 51 ms and 78 ms for 1.11.1. The whole-script confusable table is built by the first label that isn't ASCII, which adds about 7 ms (Bun) or 9 ms (Node) to that call.
 
 ## Full API
 
