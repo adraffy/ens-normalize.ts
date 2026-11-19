@@ -87,20 +87,26 @@ ensNormalizeFragment('é', true); // "e\u0301"
 
 ## Size
 
-| entry | min | gzip | 1.11.1 min | 1.11.1 gzip | min savings |
-|---|---:|---:|---:|---:|---:|
-| `@adraffy/ens-normalize.ts` (core) | 22.7 KB | 16.4 KB | 38.3 KB | 26.1 KB | 40.7% |
-| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 17.1 KB | 12.1 KB | 29.3 KB | 19.4 KB | 41.6% |
-| `@adraffy/ens-normalize.ts/full` (everything) | 25.1 KB | 17.7 KB | 44.1 KB* | 28.2 KB* | 43.1% |
+<table>
+<thead>
+<tr><th rowspan="2" valign="bottom" align="left">import</th><th colspan="2" align="center"><a href="https://github.com/adraffy/ens-normalize.js">ens-normalize.js</a></th><th colspan="2" align="center">ens-normalize.ts</th><th rowspan="2" valign="bottom" align="right">smaller</th></tr>
+<tr><th align="right">min</th><th align="right">gzip</th><th align="right">min</th><th align="right">gzip</th></tr>
+</thead>
+<tbody>
+<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">22.1 KB</td><td align="right">16.1 KB</td><td align="right">42.4%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">16.7 KB</td><td align="right">11.9 KB</td><td align="right">42.9%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">24.6 KB</td><td align="right">17.4 KB</td><td align="right">44.3%</td></tr>
+</tbody>
+</table>
 
-Sizes are minified ESM; gzip is level 9. Savings is min vs 1.11.1 min. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
+Sizes are minified ESM; gzip is level 9. Smaller compares the min sizes. The ens-normalize.js columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from the 1.11.1 `dist/`.
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
 
 **Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 48 ms, vs 54 ms for 1.11.1.
 
 ## Full API
 
-| ens-normalize.js | here | entry |
+| ens-normalize.js | ens-normalize.ts | import |
 |---|---|---|
 | `ens_normalize` | `ensNormalize(name)` | core |
 | `ens_beautify` | `ensNormalize(name, {beautify: true})` | core |
@@ -203,15 +209,25 @@ Pass a path to check a built bundle instead of the source, for example `bun test
 - **Integers:** each one is written as Exp-Golomb, and its bits are modeled per context. A context is a field type such as "set gap", "run length", or "mapping residual" (`src/contexts.ts`). The top 3 mantissa bits use a bit-tree.
 - **Probabilities:** each bit's probability is the average of a fast estimate (rate 1/4) and a slow one (rate 1/32).
 - **Output alphabet:** the coder writes base-93 digits directly instead of bytes. The digits are printable ASCII without `'` or `\`, so the blob needs no escaping. That's about 6.5 bits per char, vs 6 for base64.
-- **Mapped table:** the 1,072 entries that equal `nfd(cp)` (CJK compatibility ideographs and similar) are flagged and derived at init instead of stored.
-- **Separate blobs:** NF, core ENS, and `nfc_check` (only `ensTokenize` needs it, so only `full` includes it).
+- **Mapped table:** the 1,072 entries that equal `nfd(cp)` (CJK compatibility ideographs and similar) are flagged and derived at init instead of stored. Gaps between mapped codepoints don't count the valid ones, which are already known from the groups. An entry's first output is predicted from the previous entry of the same width, shifted by the distance between their keys.
+- **Combining classes:** every codepoint with a combining class is a combining mark, so the NF blob stores them as indices into the ENS blob's CM set. That's why `lib.ts` loads the NF tables (`initNF(cm)`).
+- **Whole-script confusables:** each member names its whole by recency rank (move-to-front) instead of a back-reference.
+- **Separate blobs:** NF, core ENS, and `nfc_check` (only `ensTokenize` needs it, so only `full` includes it). The NF blob needs CM from the ENS blob to decode.
 - **Dropped:** NFC_QC, which the decoder never used.
 
-| blob | here (base-93) | 1.11.1 (base64) |
-|---|---:|---:|
-| ENS | 10,494 | 20,100 (includes nfc_check) |
-| nfc_check | 328 | |
-| NF | 4,730 | 7,568 |
+<table>
+<thead>
+<tr><th rowspan="2" valign="bottom" align="left">blob</th><th align="center">ens-normalize.js</th><th align="center">ens-normalize.ts</th></tr>
+<tr><th align="right">base64</th><th align="right">base-93</th></tr>
+</thead>
+<tbody>
+<tr><td>ENS</td><td align="right">20,100*</td><td align="right">10,297</td></tr>
+<tr><td>nfc_check</td><td></td><td align="right">328</td></tr>
+<tr><td>NF</td><td align="right">7,568</td><td align="right">4,461</td></tr>
+</tbody>
+</table>
+
+<sup>* includes nfc_check</sup>
 
 The make script verifies every symbol by decoding it with `src/decoder.ts`.
 If you change the model, change `scripts/encoder.ts` and `src/decoder.ts` together.

@@ -12,7 +12,7 @@ export type Reader = {
 	/** signed int in context `ctx` */
 	sint(ctx: number): number;
 	/** sorted set in contexts `ctx`..`ctx+3` */
-	set(ctx: number): number[];
+	runs(ctx: number): number[];
 };
 
 export function reader(str: string): Reader {
@@ -63,28 +63,32 @@ export function reader(str: string): Reader {
 		return x & 1 ? -(x + 1) / 2 : x / 2;
 	};
 	// runs: count, then (gap, length-1) pairs; the first gap has its own context
-	const set = (ctx: number) => {
+	const runs = (ctx: number) => {
 		const v: number[] = [];
-		for (let runs = uint(ctx), x = 0; runs--; ) {
+		for (let n = uint(ctx), x = 0; n--; ) {
 			x += uint(ctx + (x ? 1 : 3));
 			for (let len = uint(ctx + 2) + 1; len--; ) v.push(x++);
 			x++;
 		}
 		return v;
 	};
-	return { uint, sint, set };
+	return { uint, sint, runs };
 }
 
 /**
  * Read a sorted table of `cp => cps`, see writeMapped() in scripts/make.ts.
- * Each output is predicted by the previous entry of the same width.
+ * Gaps between keys don't count the codepoints in `skip`.
+ * Each output is predicted by the previous entry of the same width;
+ * the first output also moves with the key (same offset as that entry).
  * Contexts: +0 count, +1 gap, +2..5 width, +6..14 residual, +15..16 derived flag.
  */
-export function readMapped(r: Reader, ctx: number, derive?: (cp: number) => number[]): [number, number[]][] {
+export function readMapped(r: Reader, ctx: number, derive?: (cp: number) => number[], skip?: Set<number>): [number, number[]][] {
 	const ret: [number, number[]][] = [];
-	const prev: number[][] = []; // by width
+	const prev: number[][] = []; // by width: [cp, ...cps]
 	for (let n = r.uint(ctx), cp = -1, width = 1, derived = 0; n--; ) {
-		cp += 1 + r.uint(ctx + 1);
+		let gap = r.uint(ctx + 1) + 1;
+		if (skip) while (gap) skip.has(++cp) || gap--;
+		else cp += gap; // don't walk every codepoint when there's nothing to skip
 		if (derive && (derived = r.uint(ctx + 15 + derived))) {
 			ret.push([cp, derive(cp)]);
 			continue;
@@ -93,9 +97,10 @@ export function readMapped(r: Reader, ctx: number, derive?: (cp: number) => numb
 		const last = prev[w];
 		const cps: number[] = [];
 		for (let j = 0; j < w; j++) {
-			cps.push((last ? last[j] : cp) + r.sint(ctx + 6 + Math.min(j, 2) + 3 * Math.min(w - 1, 2)));
+			cps.push((last ? last[j + 1] + (j ? 0 : cp - last[0]) : cp) + r.sint(ctx + 6 + Math.min(j, 2) + 3 * Math.min(w - 1, 2)));
 		}
-		ret.push([cp, (prev[w] = cps)]);
+		prev[w] = [cp, ...cps];
+		ret.push([cp, cps]);
 	}
 	return ret;
 }

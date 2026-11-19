@@ -10,3 +10,6 @@ export const nfd = (cps: Iterable<number>): number[] => nf(cps, 'NFD');
 
 /** canonical composition (native) */
 export const nfc = (cps: Iterable<number>): number[] => nf(cps, 'NFC');
+
+/** nothing to load */
+export const initNF = (_cm: number[]) => {};
