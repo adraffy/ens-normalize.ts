@@ -87,11 +87,17 @@ ensNormalizeFragment('é', true); // "e\u0301"
 
 ## Size
 
-| entry | min | gzip | 1.11.1 min | 1.11.1 gzip | min savings |
-|---|---:|---:|---:|---:|---:|
-| `@adraffy/ens-normalize.ts` (core) | 22.1 KB | 16.1 KB | 38.3 KB | 26.1 KB | 42.4% |
-| `@adraffy/ens-normalize.ts/xnf` (core, native NF) | 16.7 KB | 11.9 KB | 29.3 KB | 19.4 KB | 42.9% |
-| `@adraffy/ens-normalize.ts/full` (everything) | 24.6 KB | 17.4 KB | 44.1 KB* | 28.2 KB* | 44.3% |
+<table>
+<thead>
+<tr><th rowspan="2">entry</th><th colspan="2">ens-normalize.ts</th><th colspan="2"><a href="https://github.com/adraffy/ens-normalize.js">ens-normalize.js</a> 1.11.1</th><th rowspan="2">min savings</th></tr>
+<tr><th>min</th><th>gzip</th><th>min</th><th>gzip</th></tr>
+</thead>
+<tbody>
+<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">22.1 KB</td><td align="right">16.1 KB</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">42.4%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">16.7 KB</td><td align="right">11.9 KB</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">42.9%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">24.6 KB</td><td align="right">17.4 KB</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">44.3%</td></tr>
+</tbody>
+</table>
 
 Sizes are minified ESM; gzip is level 9. Savings is min vs 1.11.1 min. The 1.11.1 columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from its `dist/`.
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
