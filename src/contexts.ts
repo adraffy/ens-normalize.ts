@@ -1,6 +1,7 @@
 // Context ids for the encoded payloads, shared by scripts/make.ts and the readers.
 // Each id selects an independent probability model (see src/decoder.ts).
 // A set uses 4 consecutive ids. A mapped table uses 17 (see readMapped).
+// Ids must be below 128: the decoder's probability table is a fixed size.
 
 export const enum Ctx {
 	// ens

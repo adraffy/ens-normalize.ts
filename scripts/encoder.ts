@@ -71,6 +71,7 @@ export class Encoder {
 	// unsigned integer in context c
 	uint(c: number, x: number) {
 		if (!Number.isSafeInteger(x) || x < 0) throw new TypeError(`expected unsigned: ${x}`);
+		if (c >= 128) throw new RangeError(`context id out of range: ${c}`); // the decoder's table has room for 128
 		this.symbols++;
 		this.ctx = c;
 		this.log.push([c, x]);

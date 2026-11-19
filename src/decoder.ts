@@ -21,26 +21,26 @@ export function reader(str: string): Reader {
 		const c = (str.charCodeAt(pos++) || 32) - 32; // pad with zero
 		return c - +(c > 7) - +(c > 60); // printable ascii, skipping ' and \
 	};
-	// probability of 0, by key: average of a fast and a slow adaptive estimate
-	const fast: number[] = [];
-	const slow: number[] = [];
+	// probability of 0, by key: average of a fast and a slow adaptive estimate, stored side by side
+	// a typed array (rather than filling in a sparse one) keeps the lookups fast; 2^19 slots covers context ids below 128
+	const probs = new Uint16Array(1 << 19).fill(ONE >> 1);
 	let range = RADIX * BOT - 1;
 	let code = 0;
 	for (let i = 0; i < 5; i++) code = code * RADIX + digit();
 	const bit = (key: number) => {
-		const pf = (fast[key] ??= ONE >> 1);
-		const ps = (slow[key] ??= ONE >> 1);
+		const pf = probs[(key *= 2)];
+		const ps = probs[key + 1];
 		const bound = Math.floor(range / ONE) * ((pf + ps) >> 1);
 		const b = code >= bound;
 		if (b) {
 			code -= bound;
 			range -= bound;
-			fast[key] = pf - (pf >> 2);
-			slow[key] = ps - (ps >> 5);
+			probs[key] = pf - (pf >> 2);
+			probs[key + 1] = ps - (ps >> 5);
 		} else {
 			range = bound;
-			fast[key] = pf + ((ONE - pf) >> 2);
-			slow[key] = ps + ((ONE - ps) >> 5);
+			probs[key] = pf + ((ONE - pf) >> 2);
+			probs[key + 1] = ps + ((ONE - ps) >> 5);
 		}
 		while (range < BOT) {
 			range *= RADIX;
