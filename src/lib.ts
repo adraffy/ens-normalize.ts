@@ -452,6 +452,16 @@ function checkGroup(g: Group, cps: number[]) {
 		if (!inGroup(g, cp)) throw errorMixture(g, cp);
 	}
 	if (!g.checkNSM) return;
+	// a combining mark inherits the script of its base (UAX-24): without a CM whitelist, the base must be
+	// one of the group's own (primary) cps, not a shared extra (eg. Arabic "-" + U+064B)
+	// CM after an emoji was already rejected, so the base is in the same text
+	for (let i = 1, base = cps[0]; i < cps.length; i++) {
+		const cp = cps[i];
+		if (!CM.has(cp)) base = cp;
+		else if (!inAny(g.primary, base)) {
+			throw errorPlacement(`combining mark on non-${g.typeName}: "${safeStrFromCps([base])} + ${safeStrFromCps([cp])}"`);
+		}
+	}
 	// https://www.unicode.org/reports/tr39/#Optional_Detection
 	const decomposed = nfd0(cps);
 	for (let i = 1, e = decomposed.length; i < e; i++) {

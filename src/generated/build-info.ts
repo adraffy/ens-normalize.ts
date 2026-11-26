@@ -2,9 +2,9 @@
 // do not edit
 /** what this build was made from: spec versions and sha256 of the data files */
 export const ensBuildInfo = {
-	"derived": "2025-09-14T17:56:22.939Z",
-	"unicode": "17.0.0 (2025-09-10T16:58:18.331Z)",
-	"cldr": "47 (2025-08-02T20:26:29.295Z)",
-	"specHash": "4febc8f5d285cbf80d2320fb0c1777ac25e378eb72910c34ec963d0a4e319c84",
-	"nfHash": "9a9818b74d3698f97a8920b156cd672cec218b477dc6d5c342e74f4ca16ac225"
+	"derived": "2026-11-26T03:00:46.638Z",
+	"unicode": "18.0.0 (2026-11-25T20:48:52.431Z)",
+	"cldr": "48.2 (2026-03-28T19:59:34.849Z)",
+	"specHash": "6bdafd855a99f67a9456028783c40307671d360b325a7d5ead07f95b152bf4e2",
+	"nfHash": "5656c9138a6daf981ff512be766d31ccbf254edd4b59bea29a5d0cb647fecbe3"
 };

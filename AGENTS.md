@@ -6,7 +6,7 @@ Guidance for AI coding agents working in this repo. See README.md for the public
 
 A TypeScript port of the library part of [ens-normalize.js](https://github.com/adraffy/ens-normalize.js) (ENSIP-15 name normalization). Published to npm as `@adraffy/ens-normalize.ts`. The two priorities are:
 
-1. **Correctness:** normalized output and error messages must match ens-normalize.js exactly. The deliberate differences are listed under "Compatibility" in README.md.
+1. **Correctness:** normalized output and error messages must match the reference ENSIP-15 implementation in [ens-normalize-derive](https://github.com/adraffy/ens-normalize-derive) (`src/ensip15.ts`, which reproduces ens-normalize.js 1.11.1 exactly on its spec), as encoded in `tests.json`. The deliberate differences from 1.11.1 are listed under "Compatibility" in README.md.
 2. **Size:** the core bundle should stay as small as possible. Check the size of every change (see Commands).
 
 There are no runtime dependencies. Keep it that way.
@@ -43,7 +43,7 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 | `scripts/make.ts` | encodes the spec into `src/generated/` and verifies every symbol decodes |
 | `scripts/encoder.ts` | range encoder (must mirror `src/decoder.ts`) |
 | `scripts/build.ts` | bundles the `index`, `xnf`, and `full` entries |
-| `scripts/download.ts` | fetches spec + test data, pinned to an upstream commit (`UPSTREAM`) |
+| `scripts/download.ts` | fetches spec + test data from ens-normalize-derive, pinned to a commit (`DERIVE`) |
 | `test/` | bun tests; `test/fixtures/api-1.11.1.json` is output recorded from ens-normalize.js 1.11.1 |
 | `test/labels.ts` | exhaustive comparison of the core API against ens-normalize.js over adraffy/ens-labels (not part of `bun test`) |
 | `test/browser/` | static browser test pages, deployed to GitHub Pages |
@@ -66,9 +66,10 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 
 ## Updating the spec
 
-1. Bump `UPSTREAM` in `scripts/download.ts` to the new ens-normalize.js commit.
-2. Run `bun run download`, then `bun scripts/make.ts`, then `bun test`.
-3. The 1.11.1 fixture may legitimately differ for a new Unicode version. If so, regenerate it from the matching ens-normalize.js release, not from this library.
+1. Bump `DERIVE` in `scripts/download.ts` to the new ens-normalize-derive commit.
+2. Run `bun run download --force`, then `bun scripts/make.ts`, then `bun test`.
+3. The 1.11.1 fixture (`test/fixtures/api-1.11.1.json`) differs where the spec changed on purpose. Don't regenerate it from this library: extend the conversion (`unicode18`) or the `DISALLOWED` list in `test/api.test.ts`, with the reason.
+4. `bun run test:labels` still compares against ens-normalize.js 1.11.1, so with a newer spec its mismatches are the spec's changes. They should equal ens-normalize-derive's `bun run registrations` (BROKEN + ALLOWED + MESSAGE).
 
 ## Releasing
 
