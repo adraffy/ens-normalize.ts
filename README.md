@@ -96,16 +96,16 @@ ensNormalizeFragment('é', true); // "e\u0301"
 <tr><th align="right">min</th><th align="right">gzip</th><th align="right">min</th><th align="right">gzip</th></tr>
 </thead>
 <tbody>
-<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">24.1 KB</td><td align="right">17.7 KB</td><td align="right">37.1%</td></tr>
-<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">18.8 KB</td><td align="right">13.6 KB</td><td align="right">35.9%</td></tr>
-<tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">26.6 KB</td><td align="right">18.9 KB</td><td align="right">39.6%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">22.3 KB</td><td align="right">16.2 KB</td><td align="right">41.9%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">16.9 KB</td><td align="right">12.0 KB</td><td align="right">42.3%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">24.8 KB</td><td align="right">17.5 KB</td><td align="right">43.8%</td></tr>
 </tbody>
 </table>
 
-Sizes are minified ESM; gzip is level 9. Smaller compares the min sizes. The ens-normalize.js columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from the 1.11.1 `dist/` (Unicode 17). Unicode 18 grows the data, mostly the whole-script confusables, which went from 1,928 to 3,685 chars.
+Sizes are minified ESM; gzip is level 9. Smaller compares the min sizes. The ens-normalize.js columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from the 1.11.1 `dist/` (Unicode 17).
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
 
-**Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 19 ms under Bun and 31 ms under Node, vs 51 ms and 78 ms for 1.11.1. The whole-script confusable table is built by the first label that isn't ASCII, which adds about 7 ms (Bun) or 9 ms (Node) to that call.
+**Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 19 ms under Bun and 31 ms under Node, vs 51 ms and 78 ms for 1.11.1. The whole-script confusable table is built by the first label that isn't ASCII, which adds about 5 ms (Bun) or 9 ms (Node) to that call.
 
 ## Full API
 
@@ -231,7 +231,7 @@ The comparison is against 1.11.1 (Unicode 17), so with the Unicode 18 spec the m
 <tr><th align="right">base64</th><th align="right">base-93</th></tr>
 </thead>
 <tbody>
-<tr><td>ENS</td><td align="right">20,100*</td><td align="right">12,066</td></tr>
+<tr><td>ENS</td><td align="right">20,100*</td><td align="right">10,207</td></tr>
 <tr><td>nfc_check</td><td></td><td align="right">328</td></tr>
 <tr><td>NF</td><td align="right">7,568</td><td align="right">4,479</td></tr>
 </tbody>
