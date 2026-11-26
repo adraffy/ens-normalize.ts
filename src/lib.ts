@@ -233,7 +233,15 @@ function bidiQQ(s: string): string {
 const errorPlacement = (where: string) => new Error(`illegal placement: ${where}`);
 const errorDisallowed = (cp: number) => new Error(`disallowed character: ${quotedCp(cp)}`);
 
-function errorMixture(g: Group, cp: number): Error {
+// chars: the label's text, to find the base of a combining mark
+function errorMixture(g: Group, cp: number, chars: number[]): Error {
+	if (CM.has(cp)) {
+		// the mark exists in some group, but not with this text: name its base instead of an unrelated
+		// group (eg. "x" + U+0302 isn't Restricted[Cher]). chars[0] isn't a CM, so a base exists
+		let i = chars.indexOf(cp);
+		while (CM.has(chars[--i]));
+		return errorPlacement(`unsupported combining mark: "${safeStrFromCps([chars[i]])} + ${safeStrFromCps([cp])}"`);
+	}
 	let conflict = quotedCp(cp);
 	const other = GROUPS.find((g) => inAny(g.primary, cp)); // only check primary
 	if (other) conflict = `${other.typeName} ${conflict}`;
@@ -385,7 +393,7 @@ function checkValid(tokens: OutputToken[], norm: number[], emoji: boolean): Labe
 	checkCombiningMarks(tokens);
 	checkFenced(norm);
 	const unique = [...new Set(chars)];
-	const group = determineGroup(unique);
+	const group = determineGroup(unique, chars);
 	checkGroup(group, chars); // need text in order
 	checkWhole(group, unique); // only need unique text
 	return group;
@@ -427,7 +435,7 @@ function checkFenced(cps: number[]) {
 }
 
 // returns the highest priority group that contains every cp
-function determineGroup(unique: number[]): Group {
+function determineGroup(unique: number[], chars: number[]): Group {
 	let groups = GROUPS;
 	for (const cp of unique) {
 		const gs = groups.filter((g) => inGroup(g, cp));
@@ -438,7 +446,7 @@ function determineGroup(unique: number[]): Group {
 			}
 			// there is no group that contains all these characters
 			// https://www.unicode.org/reports/tr39/#mixed_script_confusables
-			throw errorMixture(groups[0], cp);
+			throw errorMixture(groups[0], cp, chars);
 		}
 		groups = gs;
 		if (gs.length == 1) break; // there is only one group left
@@ -449,7 +457,7 @@ function determineGroup(unique: number[]): Group {
 // assumption: cps.length > 0 and cps[0] isn't a CM
 function checkGroup(g: Group, cps: number[]) {
 	for (const cp of cps) {
-		if (!inGroup(g, cp)) throw errorMixture(g, cp);
+		if (!inGroup(g, cp)) throw errorMixture(g, cp, cps);
 	}
 	if (!g.checkNSM) return;
 	// a combining mark inherits the script of its base (UAX-24): without a CM whitelist, the base must be

@@ -9,7 +9,7 @@
 
 import { existsSync } from 'node:fs';
 
-const DERIVE = '33c993fb49d6a253ce9c7855d2cb0833e3cfd51d'; // adraffy/ens-normalize-derive (Unicode 18)
+const DERIVE = 'dd53241034b9a7b7b0652b45a9e4db9f9499100f'; // adraffy/ens-normalize-derive (Unicode 18)
 // ens-normalize.js 1.11.1 (Unicode 17): only test/labels.ts uses it, as the release to compare against
 const UPSTREAM = '47d8465c8d69a663dc9a3329d068e6d9e4a5eb3f'; // adraffy/ens-normalize.js
 const LABELS = '9e96e2ba97142df523ac9dc386458dec8804d1d9'; // adraffy/ens-labels (2026-10-18, 3,422,100 labels)
