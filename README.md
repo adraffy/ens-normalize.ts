@@ -5,6 +5,7 @@
 
 [ENSIP-15](https://docs.ens.domains/ensip/15) ENS name normalization in TypeScript.
 It's a port of the library part of [ens-normalize.js](https://github.com/adraffy/ens-normalize.js), with no runtime dependencies.
+The spec (Unicode 18) and validation tests come from [ens-normalize-derive](https://github.com/adraffy/ens-normalize-derive).
 
 Run the tests in your browser: [validate](https://adraffy.github.io/ens-normalize.ts/test/browser/validate.html) · [report-nf](https://adraffy.github.io/ens-normalize.ts/test/browser/report-nf.html)
 
@@ -60,6 +61,8 @@ The possible reasons, with the exact format and an example of each. `"x" {HEX}` 
 | `illegal placement: leading NAME`<br>`illegal placement: trailing NAME`<br>`illegal placement: NAME + NAME` | a fenced character (apostrophe `’`, fraction slash `⁄`, middle dot `・`) can't start or end a label, or touch another one. `'` maps to `’`. | `"'a"` → `illegal placement: leading apostrophe`<br>`"a・"` → `illegal placement: trailing middle dot`<br>`"1⁄⁄2"` → `illegal placement: fraction slash + fraction slash` |
 | `illegal placement: leading combining mark` | the label starts with a combining mark | `"\u0303a"` |
 | `illegal placement: emoji + combining mark: "EMOJI + ◌x"` | a combining mark directly after an emoji | `"💩\u0303"` → `illegal placement: emoji + combining mark: "💩 + ◌̃"` |
+| `illegal placement: unsupported combining mark: "x + ◌y"` | a combining mark that isn't allowed with the rest of the label, shown with the character it's on | `"x\u0302"` → `illegal placement: unsupported combining mark: "x + ◌̂"` |
+| `illegal placement: combining mark on non-GROUP: "x + ◌y"` | in a script without a combining-mark whitelist, a mark on a shared character instead of one of the script's own | `"ب-\u064Bب"` → `illegal placement: combining mark on non-Arabic: "- + ◌ً"` |
 | `illegal mixture: GROUP + "x" {HEX}`<br>`illegal mixture: GROUP + OTHER "x" {HEX}` | characters from scripts that can't be mixed. GROUP is the label's script; OTHER is the script the conflicting character belongs to, when it has one. | `"aα"` → `illegal mixture: Latin + Greek "α" {3B1}` |
 | `whole-script confusable: GROUP/OTHER` | every character could be mistaken for one in another script, so the whole label looks like a name in OTHER | `"аррӏе"` (Cyrillic) → `whole-script confusable: Cyrillic/Latin` |
 | `duplicate non-spacing marks: "◌x" {HEX}` | the same non-spacing mark twice in a row | `"\u0622\u064D\u064D"` → `duplicate non-spacing marks: "◌ٍ" {64D}` |
@@ -93,16 +96,16 @@ ensNormalizeFragment('é', true); // "e\u0301"
 <tr><th align="right">min</th><th align="right">gzip</th><th align="right">min</th><th align="right">gzip</th></tr>
 </thead>
 <tbody>
-<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">22.0 KB</td><td align="right">16.1 KB</td><td align="right">42.4%</td></tr>
-<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">16.7 KB</td><td align="right">12.0 KB</td><td align="right">43.0%</td></tr>
-<tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">24.6 KB</td><td align="right">17.4 KB</td><td align="right">44.3%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts</code> (core)</td><td align="right">38.3 KB</td><td align="right">26.1 KB</td><td align="right">22.3 KB</td><td align="right">16.2 KB</td><td align="right">41.9%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/xnf</code> (core, native NF)</td><td align="right">29.3 KB</td><td align="right">19.4 KB</td><td align="right">16.9 KB</td><td align="right">12.0 KB</td><td align="right">42.3%</td></tr>
+<tr><td><code>@adraffy/ens-normalize.ts/full</code> (everything)</td><td align="right">44.1 KB*</td><td align="right">28.2 KB*</td><td align="right">24.8 KB</td><td align="right">17.5 KB</td><td align="right">43.8%</td></tr>
 </tbody>
 </table>
 
-Sizes are minified ESM; gzip is level 9. Smaller compares the min sizes. The ens-normalize.js columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from the 1.11.1 `dist/`.
+Sizes are minified ESM; gzip is level 9. Smaller compares the min sizes. The ens-normalize.js columns are `index.min.js`, `index-xnf.min.js`, and `all.min.js` from the 1.11.1 `dist/` (Unicode 17).
 \* `all.min.js` also includes the DOM helpers from `parts.js`, which aren't ported.
 
-**Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 19 ms under Bun and 31 ms under Node, vs 51 ms and 78 ms for 1.11.1. The whole-script confusable table is built by the first label that isn't ASCII, which adds about 7 ms (Bun) or 9 ms (Node) to that call.
+**Speed:** normalizing is as fast as 1.11.1 (about 75 ms for the 38,614 validation names under Bun). The first call decodes the data in about 19 ms under Bun and 31 ms under Node, vs 51 ms and 78 ms for 1.11.1. The whole-script confusable table is built by the first label that isn't ASCII, which adds about 5 ms (Bun) or 9 ms (Node) to that call.
 
 ## Full API
 
@@ -163,7 +166,13 @@ ensTokenize('A\u0301b💩.');
 
 ### Compatibility
 
-Error messages and outputs match 1.11.1 exactly. Differences:
+Error messages and outputs match 1.11.1 exactly, except where the Unicode 18 spec changed them on purpose:
+- **Spec:** Unicode 18 data and rules from ens-normalize-derive. Against every registered label, 38 valid labels become invalid, 5 invalid ones become valid (new emoji), and none normalizes differently. The derive repo's `bun run registrations` lists them.
+- **Common group:** labels without a letter (`€100`, `💎100`) have type `Common` instead of `Latin`, and errors say `Common + …` instead of `Latin + …`.
+- **Combining mark base:** in groups without a CM whitelist, a combining mark must follow one of the group's own characters, not a shared extra (Arabic `-`, Hebrew `₪`, Thai `฿`). Its error is `illegal placement: combining mark on non-Arabic: "- + ◌ً"`. A combining mark inherits its base's script (UAX-24), and no registered label is affected.
+- **Unsupported combining mark:** a combining mark that isn't in the label's group used to be an `illegal mixture` naming the first group that lists the mark, usually an unrelated one (`x̂` → `Latin + Restricted[Cher] "◌̂"`). It's now `illegal placement: unsupported combining mark: "x + ◌̂"`. The same labels fail; 37 registered labels get the new message (mostly Turkish `İ`, which maps to `i` + U+0307).
+
+API differences:
 - `ensTokenize` returns the new shape above. The tests convert it back to 1.11.1's format and check it against that version's output.
 - `Label.emoji` is `false` instead of `undefined` for text-only labels.
 - Emoji tokens are plain arrays (no `Emoji` subclass or `is_emoji` getter), which matters on engines like Hermes where `.slice()`/`.filter()` don't preserve subclasses.
@@ -191,13 +200,14 @@ bun test              # downloads tests if missing
 bun run test:labels   # exhaustive check against ens-normalize.js (see below)
 ```
 
-The spec and test JSON aren't committed. They're fetched from ens-normalize.js, pinned to the commit in `scripts/download.ts`. Bump `UPSTREAM` there and run `bun run download` to update.
+The spec and test JSON aren't committed. They're fetched from [ens-normalize-derive](https://github.com/adraffy/ens-normalize-derive), pinned to the commit in `scripts/download.ts`. Bump `DERIVE` there and run `bun run download --force` to update.
 
 ### Exhaustive check
 
-`bun run test:labels` runs every label in [adraffy/ens-labels](https://github.com/adraffy/ens-labels) (3,422,100 labels seen in ENS contract events and primary names) through this library and through ens-normalize.js, and compares every output and error message of the core API: normalize, beautify, and fragment.
-It isn't part of `bun test`: the first run downloads `labels.json` (about 50 MB) and ens-normalize.js, both pinned in `scripts/download.ts`, and a run takes about half a minute.
+`bun run test:labels` runs every label in [adraffy/ens-labels](https://github.com/adraffy/ens-labels) (about 3.4 million labels seen in ENS contract events and primary names) through this library and through ens-normalize.js, and compares every output and error message of the core API: normalize, beautify, and fragment.
+It isn't part of `bun test`: the first run downloads `labels.json` (about 50 MB) and ens-normalize.js 1.11.1, from the branches named in `scripts/download.ts` (so the label count grows over time), and a run takes about half a minute.
 Pass a path to check a built bundle instead of the source, for example `bun test/labels.ts dist/index.js`.
+The comparison is against 1.11.1 (Unicode 17), so with the Unicode 18 spec the mismatches are the spec's changes: 733 for normalize and beautify each (38 valid labels become invalid, 5 invalid ones become valid, and 690 get a different error message), matching ens-normalize-derive's registrations report, and 24 each for fragment and fragmentNFD.
 `ensSplit` and `ensTokenize` aren't compared here; `test/api.test.ts` checks them against output recorded from 1.11.1.
 
 ### Data encoding
@@ -221,9 +231,9 @@ Pass a path to check a built bundle instead of the source, for example `bun test
 <tr><th align="right">base64</th><th align="right">base-93</th></tr>
 </thead>
 <tbody>
-<tr><td>ENS</td><td align="right">20,100*</td><td align="right">10,297</td></tr>
+<tr><td>ENS</td><td align="right">20,100*</td><td align="right">10,207</td></tr>
 <tr><td>nfc_check</td><td></td><td align="right">328</td></tr>
-<tr><td>NF</td><td align="right">7,568</td><td align="right">4,461</td></tr>
+<tr><td>NF</td><td align="right">7,568</td><td align="right">4,479</td></tr>
 </tbody>
 </table>
 

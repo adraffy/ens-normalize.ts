@@ -43,10 +43,39 @@ const run = (f: () => unknown) => {
 const plain = (v: unknown) =>
 	JSON.parse(JSON.stringify(v, (k, x) => (x instanceof Error ? { error: x.message } : (k === 'emoji' && !x) || k === 'restricted' ? undefined : x)));
 
+// the fixture is 1.11.1 (Unicode 17); these are the spec's intended changes since then (ens-normalize-derive):
+// - the Common group: labels without a letter are typed "Common" instead of "Latin", and errors name it
+const unicode18 = (v: unknown) =>
+	JSON.parse(
+		JSON.stringify(v)
+			.replaceAll('"type":"Common"', '"type":"Latin"')
+			.replaceAll(': Common + ', ': Latin + ')
+			.replaceAll('+ Common \\"', '+ Latin \\"'),
+	);
+// - a combining mark outside the group: "unsupported combining mark" replaces an illegal mixture that
+//   named an unrelated group (same outcome). Where the fixture has the old message, take the new one
+const unsupportedMark = (got: any, want: any): any => {
+	if (typeof got !== 'object' || got === null || typeof want !== 'object' || want === null) return want;
+	if (
+		typeof got.error === 'string' &&
+		typeof want.error === 'string' &&
+		got.error.startsWith('illegal placement: unsupported combining mark: ') &&
+		want.error.startsWith('illegal mixture: ')
+	) {
+		want = { ...want, error: got.error };
+	}
+	const out: any = Array.isArray(want) ? [] : {};
+	for (const k of Object.keys(want)) out[k] = unsupportedMark(got[k], want[k]);
+	return out;
+};
+// - characters that are no longer valid: skip names that use them
+const DISALLOWED = [0x9fd]; // BENGALI ABBREVIATION SIGN
+
 test(`api parity (${cases.length} names)`, () => {
 	for (const c of cases) {
 		const { name } = c;
-		expect(
+		if (DISALLOWED.some((cp) => name.includes(String.fromCodePoint(cp)))) continue;
+		const got = unicode18(
 			plain({
 				name,
 				normalize: run(() => lib.ensNormalize(name)),
@@ -56,7 +85,8 @@ test(`api parity (${cases.length} names)`, () => {
 				split: run(() => lib.ensSplit(name)),
 				tokenize: run(() => legacy(lib.ensTokenize(name))),
 			}),
-		).toEqual(c);
+		);
+		expect(got).toEqual(unsupportedMark(got, c));
 	}
 });
 
@@ -72,7 +102,7 @@ test('examples', () => {
 	expect(lib.safeStrFromCps([0x300, 0x61, 0x200d])).toBe('◌̀a{200D}');
 	expect(lib.nfc([0x65, 0x301])).toEqual([0xe9]);
 	expect(lib.nfd([0xe9])).toEqual([0x65, 0x301]);
-	expect(lib.ensBuildInfo.unicode).toStartWith('17.0.0');
+	expect(lib.ensBuildInfo.unicode).toStartWith('18.0.0');
 });
 
 test('restricted', () => {
