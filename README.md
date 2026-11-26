@@ -204,10 +204,10 @@ The spec and test JSON aren't committed. They're fetched from [ens-normalize-der
 
 ### Exhaustive check
 
-`bun run test:labels` runs every label in [adraffy/ens-labels](https://github.com/adraffy/ens-labels) (3,422,100 labels seen in ENS contract events and primary names) through this library and through ens-normalize.js, and compares every output and error message of the core API: normalize, beautify, and fragment.
-It isn't part of `bun test`: the first run downloads `labels.json` (about 50 MB) and ens-normalize.js, both pinned in `scripts/download.ts`, and a run takes about half a minute.
+`bun run test:labels` runs every label in [adraffy/ens-labels](https://github.com/adraffy/ens-labels) (about 3.4 million labels seen in ENS contract events and primary names) through this library and through ens-normalize.js, and compares every output and error message of the core API: normalize, beautify, and fragment.
+It isn't part of `bun test`: the first run downloads `labels.json` (about 50 MB) and ens-normalize.js 1.11.1, from the branches named in `scripts/download.ts` (so the label count grows over time), and a run takes about half a minute.
 Pass a path to check a built bundle instead of the source, for example `bun test/labels.ts dist/index.js`.
-The comparison is against 1.11.1 (Unicode 17), so with the Unicode 18 spec the mismatches are the spec's changes: 721 for normalize and beautify each, matching ens-normalize-derive's registrations report (38 + 5 + 678), and 24 each for fragment and fragmentNFD.
+The comparison is against 1.11.1 (Unicode 17), so with the Unicode 18 spec the mismatches are the spec's changes: 733 for normalize and beautify each (38 valid labels become invalid, 5 invalid ones become valid, and 690 get a different error message), matching ens-normalize-derive's registrations report, and 24 each for fragment and fragmentNFD.
 `ensSplit` and `ensTokenize` aren't compared here; `test/api.test.ts` checks them against output recorded from 1.11.1.
 
 ### Data encoding

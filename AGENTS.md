@@ -43,7 +43,7 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 | `scripts/make.ts` | encodes the spec into `src/generated/` and verifies every symbol decodes |
 | `scripts/encoder.ts` | range encoder (must mirror `src/decoder.ts`) |
 | `scripts/build.ts` | bundles the `index`, `xnf`, and `full` entries |
-| `scripts/download.ts` | fetches spec + test data from ens-normalize-derive, pinned to a commit (`DERIVE`) |
+| `scripts/download.ts` | fetches spec + test data from ens-normalize-derive's `main`, plus what `test/labels.ts` needs; sources are branches, not commits |
 | `test/` | bun tests; `test/fixtures/api-1.11.1.json` is output recorded from ens-normalize.js 1.11.1 |
 | `test/labels.ts` | exhaustive comparison of the core API against ens-normalize.js over adraffy/ens-labels (not part of `bun test`) |
 | `test/browser/` | static browser test pages, deployed to GitHub Pages |
@@ -54,7 +54,7 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 
 - **Encoder and decoder change together.** The coder's constants (radix 93, 12-bit probabilities, fast/slow rates 2 and 5, tree depth 3, 2048 keys per context, context ids below 128) are written as literals in both `scripts/encoder.ts` and `src/decoder.ts`. The order of reads in `lib.ts`/`nf.ts`/`tokenize.ts` must match the order of writes in `make.ts`. `make.ts` replays every symbol through the real decoder and throws on a mismatch.
 - **Context ids live in `src/contexts.ts`.** A set uses 4 consecutive ids, and a mapped table uses 17. Don't overlap ranges.
-- **Regenerate after encoding changes:** run `bun scripts/make.ts` and commit `src/generated/`. CI fails if regenerating changes those files.
+- **Regenerate after encoding changes:** run `bun scripts/make.ts` and commit `src/generated/`. CI fails if regenerating changes those files. CI downloads from ens-normalize-derive's `main`, so it also fails when the data there changes; then follow "Updating the spec".
 - **Don't edit `src/generated/`** by hand.
 - **Keep parity.** If a change alters any output or error message, it's a bug unless it was asked for. Then update README "Compatibility", and update the conversion or skip list in `test/api.test.ts`. Never regenerate `test/fixtures/api-1.11.1.json` from this library; it has to come from ens-normalize.js. For changes to the data encoding, the readers, or the build, also run `bun run test:labels` (it takes a bundle path too, e.g. `bun test/labels.ts dist/index.js`).
 - **Don't use `Array` subclasses or rely on `Symbol.species`.** Hermes (React Native) doesn't support it; see ens-normalize.js#35. Emoji are tracked as `{ cps, emoji: true }` tokens.
@@ -66,7 +66,7 @@ Run `bun test`, `bun run typecheck`, and `bun run build` before considering a ch
 
 ## Updating the spec
 
-1. Bump `DERIVE` in `scripts/download.ts` to the new ens-normalize-derive commit.
+1. `DERIVE` in `scripts/download.ts` follows ens-normalize-derive's `main` while that repo is a work in progress.
 2. Run `bun run download --force`, then `bun scripts/make.ts`, then `bun test`.
 3. The 1.11.1 fixture (`test/fixtures/api-1.11.1.json`) differs where the spec changed on purpose. Don't regenerate it from this library: extend the conversion (`unicode18`) or the `DISALLOWED` list in `test/api.test.ts`, with the reason.
 4. `bun run test:labels` still compares against ens-normalize.js 1.11.1, so with a newer spec its mismatches are the spec's changes. They should equal ens-normalize-derive's `bun run registrations` (BROKEN + ALLOWED + MESSAGE).
